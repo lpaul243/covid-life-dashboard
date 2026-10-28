@@ -1,0 +1,779 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>COVID Life Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#FFFFFF; --panel:#F5F5F5; --fg:#1A1A1A; --muted:#4D4D4D; --line:#D0D0D0; --accent:#0072B2;
+  --covid:#D55E00; --unemp:#0072B2; --home:#E69F00; --income:#009E73; --infl:#CC79A7;
+  --shade:#D9D9D9; --focus:#0072B2;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121212; --panel:#1C1C1C; --fg:#F2F2F2; --muted:#C8C8C8; --line:#3A3A3A; --accent:#56B4E9; --shade:#3A3A3A; --focus:#56B4E9;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121212; --panel:#1C1C1C; --fg:#F2F2F2; --muted:#C8C8C8; --line:#3A3A3A; --accent:#56B4E9; --shade:#3A3A3A; --focus:#56B4E9;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:"Atkinson Hyperlegible",Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));-webkit-font-smoothing:antialiased}
+h1,h2,h3{line-height:1.25;text-wrap:balance;margin:0 0 .5em}
+h1{font-size:clamp(1.75rem,4vw,2.5rem)}
+h2{font-size:1.4rem}
+h3{font-size:1.15rem}
+p{margin:0 0 .9em;max-width:70ch}
+.muted{color:var(--muted)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:4px}
+.wrap{max-width:1200px;margin:0 auto;padding-block:20px 56px}
+
+header.top{padding-block:20px 8px}
+.byline{display:inline-block;font-size:15px;color:var(--fg);border-left:4px solid var(--accent);padding:6px 12px;margin-bottom:14px;background:var(--panel);border-radius:0 6px 6px 0}
+.eyebrow{font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:2px solid var(--line);margin:16px 0 24px}
+.tab{appearance:none;border:0;background:none;color:var(--muted);font:inherit;font-size:16px;font-weight:700;padding:10px 12px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;transition:color .25s ease,border-color .25s ease,background .25s ease}
+.tab:hover{color:var(--fg);background:var(--panel)}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.view{animation:fadeUp .5s ease both}
+.view[hidden]{display:none!important}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:4px 0 26px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;animation:fadeUp .6s ease both}
+.kpi:nth-child(2){animation-delay:.08s}.kpi:nth-child(3){animation-delay:.16s}.kpi:nth-child(4){animation-delay:.24s}
+.kpi .num{font-size:clamp(1.6rem,3.4vw,2.1rem);font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1;margin-bottom:6px}
+.kpi .lab{font-size:15px;color:var(--muted)}
+
+/* Hero map */
+.hero{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:26px;animation:fadeUp .6s ease both}
+.hero-top{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.bigyear{font-size:clamp(1.8rem,4vw,2.4rem);font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:0 0 12px}
+label.ctl{display:flex;gap:8px;align-items:center;font-size:16px}
+select,input[type="search"],button.btn{font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--muted);border-radius:6px;padding:8px 10px;min-height:42px}
+button.btn{cursor:pointer;font-weight:700;transition:background .2s ease,transform .15s ease;min-width:120px}
+button.btn:hover{background:var(--panel)}
+button.btn:active{transform:scale(.97)}
+input[type="range"]{width:min(100%,380px);accent-color:var(--accent);min-height:32px}
+.tilemap{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;max-width:720px;margin:0 auto}
+.tile{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:clamp(10px,1.6vw,14px);border-radius:5px;color:#FFFFFF;background:#8c8c8c;transition:background-color .7s ease,transform .2s ease,box-shadow .2s ease;cursor:pointer;border:0;font-family:inherit;min-width:0;text-shadow:0 0 3px rgba(0,0,0,.45)}
+.tile:hover{transform:scale(1.08);box-shadow:0 2px 8px rgba(0,0,0,.25);z-index:2}
+.tile[aria-pressed="true"]{outline:3px solid var(--fg);outline-offset:1px}
+.legend{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--muted);margin:14px auto 0;max-width:720px;flex-wrap:wrap}
+.legend .bar{flex:1;min-width:160px;height:14px;border-radius:4px;border:1px solid var(--line);transition:background .7s ease}
+.readout{font-size:16px;min-height:3em;margin-top:10px;max-width:none}
+
+/* Panels */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:18px}
+.panel{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px;min-width:0;animation:fadeUp .6s ease both}
+.panel.wide{grid-column:1/-1}
+.panel h3{margin-bottom:6px}
+.where{font-size:15px;color:var(--muted);margin:0 0 6px}
+.ask{font-size:16px;margin-bottom:12px}
+.chart{position:relative;width:100%;height:300px}
+.chart.tall{height:340px}
+.lbl{font-weight:700;margin:16px 0 4px;font-size:16px}
+.txt{margin:0 0 12px;max-width:none;font-size:16px}
+.scroll{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px}
+.gloss-note{font-size:15px;color:var(--muted);margin:0}
+
+.prose section{margin-bottom:26px}
+.prose ul{padding-left:1.2em;max-width:72ch}
+.prose li{margin-bottom:.6em}
+.gloss{display:grid;grid-template-columns:minmax(140px,max-content) 1fr;gap:10px 18px;max-width:800px}
+.gloss dt{font-weight:700}
+.gloss dd{margin:0;color:var(--muted)}
+.callout{background:var(--panel);border-left:4px solid var(--accent);padding:12px 16px;border-radius:6px;margin:14px 0;max-width:72ch}
+.r-row{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline;margin:6px 0 4px}
+.rbig{font-size:1.5rem;font-weight:700;font-variant-numeric:tabular-nums}
+.stepbox{background:var(--panel);border-radius:8px;padding:12px 16px;margin:12px 0;max-width:72ch}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="byline"><b>Created by Laura Paul</b><br>Data Analytics for Business Managers · QMB 6358 · Section 901 · Fall 2026</div>
+    <div class="eyebrow">How COVID changed daily life, 2014 to 2024 · United States</div>
+    <h1>COVID Life Dashboard</h1>
+    <p class="muted">Jobs, prices, paychecks, home prices, deaths, and states. Start with the map and the main dashboard. Go deeper for states, drill-downs, and the full data.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+    <button class="tab" role="tab" id="t-start" aria-controls="v-start" aria-selected="false" data-tab="start">Start here</button>
+    <button class="tab" role="tab" id="t-main" aria-controls="v-main" aria-selected="true" data-tab="main">Main dashboard</button>
+    <button class="tab" role="tab" id="t-deep" aria-controls="v-deep" aria-selected="false" data-tab="deep">Go deeper</button>
+    <button class="tab" role="tab" id="t-tested" aria-controls="v-tested" aria-selected="false" data-tab="tested">Tested, no clear link</button>
+    <button class="tab" role="tab" id="t-limits" aria-controls="v-limits" aria-selected="false" data-tab="limits">Data limits</button>
+    <button class="tab" role="tab" id="t-src" aria-controls="v-src" aria-selected="false" data-tab="src">Sources</button>
+  </nav>
+
+  <!-- START HERE -->
+  <section id="v-start" class="view prose" role="tabpanel" aria-labelledby="t-start" hidden>
+    <section>
+      <h2>What this dashboard asks</h2>
+      <p>What happened to jobs, prices, paychecks, home prices, and deaths in the United States from 2014 to 2024, and how did the COVID years change things? Each panel answers one question.</p>
+    </section>
+    <section>
+      <h2>How to read a panel</h2>
+      <div class="stepbox">
+        <p><b>1. The question</b> is in bold at the top of each panel.</p>
+        <p><b>2. Where and when</b> tells you the place (U.S. or states) and the years.</p>
+        <p><b>3. The chart</b> shows the data. Hover over it, or tap on a phone, to see exact values.</p>
+        <p><b>4. What it shows</b> explains the chart in plain words.</p>
+        <p><b>5. Limits</b> says what the chart cannot tell you.</p>
+      </div>
+      <p>Grey shading on a chart marks the COVID period.</p>
+    </section>
+    <section>
+      <h2>Words used here</h2>
+      <dl class="gloss">
+        <dt>Births minus deaths</dt><dd>The number of births in a year minus the number of deaths that year. A positive number means more people were born than died.</dd>
+        <dt>Deaths per 100,000</dt><dd>How many people died per 100,000 residents. This lets places of different sizes be compared fairly.</dd>
+        <dt>Crude (raw) rate</dt><dd>The plain count of deaths divided by population, with no adjustment for age. Compare it with care, because older places can have higher rates for reasons unrelated to COVID.</dd>
+        <dt>Median household income</dt><dd>The income of the middle household: half earn more, half earn less.</dd>
+        <dt>Real (or 2025 dollars)</dt><dd>Dollar amounts adjusted for inflation, so $82,750 in 2019 and $82,117 in 2023 can be compared directly.</dd>
+        <dt>Inflation</dt><dd>How much prices rose over a year, as a percentage.</dd>
+        <dt>Unemployment rate</dt><dd>The share of people who want a job and are actively looking, but don't have one.</dd>
+        <dt>Labor force participation</dt><dd>The share of adults who are working or looking for work.</dd>
+        <dt>Home price index</dt><dd>A number that tracks home prices over time. Compare how much it changed, not its size.</dd>
+        <dt>Correlation</dt><dd>A score from -1 to +1 showing whether two measures move together across places. Near 0 means no clear straight-line pattern. It does not prove that one causes the other.</dd>
+      </dl>
+    </section>
+  </section>
+
+  <!-- MAIN DASHBOARD -->
+  <section id="v-main" class="view" role="tabpanel" aria-labelledby="t-main">
+    <div class="kpis">
+      <div class="kpi"><div class="num" data-count="1004208" data-dec="0">0</div><div class="lab">COVID-19 deaths in the U.S., 2020 to 2023</div></div>
+      <div class="kpi"><div class="num" data-count="14.8" data-dec="1" data-suffix="%">0</div><div class="lab">Highest monthly unemployment rate, April 2020</div></div>
+      <div class="kpi"><div class="num" id="kpi-hp">0</div><div class="lab">Change in home prices, 2019 to 2023</div></div>
+      <div class="kpi"><div class="num" id="kpi-inc">$0</div><div class="lab">Typical household income in 2023 (2025 dollars), down from <span id="kpi-inc0"></span> in 2019</div></div>
+    </div>
+
+    <!-- HERO MAP -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-top">
+        <div>
+          <h2 id="hero-title">COVID deaths by state, 2020 to 2023</h2>
+          <p class="where">Where: all 50 states · When: pick a year, or press play</p>
+        </div>
+        <div class="bigyear" id="hero-year-label" aria-live="polite">2020</div>
+      </div>
+      <p class="ask">Each square is one state, placed roughly where it sits on the map. Darker purple means fewer COVID deaths per 100,000 people. Yellow means more.</p>
+      <div class="controls">
+        <button class="btn" id="hero-play" aria-pressed="false">Play</button>
+        <label class="ctl">Year <input type="range" id="hero-year" min="2020" max="2023" step="1" value="2020" aria-valuetext="2020"></label>
+      </div>
+      <div class="tilemap" id="hero-tiles" role="group" aria-label="State tiles colored by COVID deaths per 100,000 people"></div>
+      <div class="legend"><span>Fewer</span><div class="bar" id="hero-legend"></div><span>More</span></div>
+      <div class="legend" style="justify-content:space-between;margin-top:4px"><span id="hero-lo"></span><span id="hero-hi"></span></div>
+      <div class="readout" id="hero-readout" aria-live="polite">Press a square to see that state's number.</div>
+      <p class="lbl">What it shows</p>
+      <p class="txt">COVID deaths per 100,000 people in each state, for the year you pick. A state's rate depends on how many people died and how many people live there. The darkest and brightest squares show the gap between states. Most states were highest in the same years, but the timing varied.</p>
+      <p class="lbl">Limits</p>
+      <p class="txt">This is the crude (raw) rate: total deaths per 100,000 people, not adjusted for age. Older states can look worse even when the risk is similar. 2024 and 2025 state counts are incomplete, so the map stops at 2023.</p>
+    </section>
+
+    <div class="grid">
+      <!-- 1 JOBS -->
+      <article class="panel">
+        <h3>1. Did jobs disappear in 2020, and did they come back?</h3>
+        <p class="where">Where: U.S. (national) · When: monthly, January 2019 to December 2021</p>
+        <div class="chart tall"><canvas id="c-jobs" role="img" aria-label="Line chart of the U.S. monthly unemployment rate, January 2019 to December 2021, with a spike to 14.8 percent in April 2020"></canvas></div>
+        <p class="lbl">What it shows</p>
+        <p class="txt">Unemployment was about 3.5% before COVID. It jumped to 14.8% in April 2020, the highest month in this data. By December 2021 it was back to 3.9%.</p>
+        <p class="lbl">Limits</p>
+        <p class="txt">This counts people actively looking for work. It does not count people who stopped looking. It is also national only.</p>
+      </article>
+
+      <!-- 2 BIRTHS MINUS DEATHS -->
+      <article class="panel">
+        <h3>2. Did births keep up with deaths?</h3>
+        <p class="where">Where: U.S. (national) · When: yearly, 2014 to 2024</p>
+        <p class="ask">The line is births minus deaths: how many more people were born than died. The bars are COVID deaths.</p>
+        <div class="chart tall"><canvas id="c-births" role="img" aria-label="Line of births minus deaths and bars of COVID deaths, U.S., 2014 to 2024"></canvas></div>
+        <p class="lbl">What it shows</p>
+        <p class="txt">Births minus deaths fell from about 1.36 million in 2014 to about 200,000 in 2021, as deaths rose. COVID caused about 351,000 deaths in 2020 and about 417,000 in 2021. Births also fell steadily, from 3.99 million in 2014 to 3.60 million in 2023.</p>
+        <p class="lbl">Limits</p>
+        <p class="txt">COVID deaths are part of total deaths, not on top of them. The chart does not show how many of those people would have died of something else that year.</p>
+      </article>
+
+      <!-- 3 INFLATION -->
+      <article class="panel">
+        <h3>3. Did prices rise faster during COVID?</h3>
+        <p class="where">Where: U.S. (national) · When: yearly, 2015 to 2024</p>
+        <div class="chart"><canvas id="c-infl" role="img" aria-label="Bar chart of U.S. yearly inflation, 2015 to 2024, peaking in 2022"></canvas></div>
+        <p class="lbl">What it shows</p>
+        <p class="txt" id="infl-text"></p>
+        <p class="lbl">Limits</p>
+        <p class="txt">This is an average across many goods and services. Your own costs may have risen more or less. 2025 is left out because the year was not complete.</p>
+      </article>
+
+      <!-- 4 PAYCHECKS IN DOLLARS -->
+      <article class="panel">
+        <h3>4. What did a typical household earn, in dollars?</h3>
+        <p class="where">Where: U.S. (national) · When: yearly, 2014 to 2024, in 2025 dollars</p>
+        <div class="chart"><canvas id="c-income" role="img" aria-label="Line of median household income in 2025 dollars, U.S., 2014 to 2024, flat after 2019"></canvas></div>
+        <p class="lbl">What it shows</p>
+        <p class="txt" id="income-text"></p>
+        <p class="lbl">Limits</p>
+        <p class="txt">The median is the middle household. The Census did not publish a 1-year estimate for 2020, so that year is blank. Dollar amounts are adjusted to 2025 so years can be compared.</p>
+      </article>
+
+      <!-- 5 TOP CAUSES -->
+      <article class="panel">
+        <h3>5. What were the top five causes of death each year?</h3>
+        <p class="where">Where: U.S. (national) · When: pick a year, 2014 to 2024</p>
+        <div class="controls">
+          <label class="ctl">Year <select id="cause-year"></select></label>
+        </div>
+        <div class="chart"><canvas id="c-causes" role="img" aria-label="Horizontal bars of the top five causes of death for the selected year, with COVID-19 highlighted when it appears"></canvas></div>
+        <p class="lbl">What it shows</p>
+        <p class="txt" id="cause-text"></p>
+        <p class="lbl">Limits</p>
+        <p class="txt">These are counts of deaths, not rates, so a growing population can push counts up. COVID-19 was not a listed cause of death before 2020.</p>
+      </article>
+
+      <!-- 6 STATES -->
+      <article class="panel wide">
+        <h3>6. Which states saw the biggest job changes from 2019 to 2023?</h3>
+        <p class="where">Where: all 50 states · When: change from 2019 to 2023</p>
+        <p class="ask">Left: how much each state's unemployment rate changed. Right: how much each state's labor force participation changed. Each bar is one state.</p>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px">
+          <div>
+            <p class="lbl" style="margin-top:0">Unemployment rate change (percentage points)</p>
+            <div class="scroll"><div style="position:relative;height:1000px"><canvas id="c-st-un" role="img" aria-label="Bar chart of each state's unemployment rate change from 2019 to 2023, sorted from highest to lowest"></canvas></div></div>
+          </div>
+          <div>
+            <p class="lbl" style="margin-top:0">Labor force participation change (percentage points)</p>
+            <div class="scroll"><div style="position:relative;height:1000px"><canvas id="c-st-lf" role="img" aria-label="Bar chart of each state's labor force participation change from 2019 to 2023, sorted from highest to lowest"></canvas></div></div>
+          </div>
+        </div>
+        <p class="lbl">What it shows</p>
+        <p class="txt" id="states-text"></p>
+        <p class="lbl">Limits</p>
+        <p class="txt">These are yearly averages. A change of one point is small; the bars are sorted so you can scan the largest moves first. Each chart is read on its own. The two charts are not lined up state by state.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- GO DEEPER -->
+  <section id="v-deep" class="view" role="tabpanel" aria-labelledby="t-deep" hidden>
+    <div class="grid">
+      <article class="panel wide">
+        <h3>Home prices, nationally</h3>
+        <p class="where">Where: U.S. (national) · When: yearly, 2014 to 2025</p>
+        <p class="ask">Home prices, shown as a number that tracks change over time (the FHFA home price index, 1975 = 100).</p>
+        <div class="chart tall"><canvas id="c-home" role="img" aria-label="Line of the U.S. home price index, 2014 to 2025, rising every year"></canvas></div>
+        <p class="lbl">What it shows</p>
+        <p class="txt" id="home-text"></p>
+        <p class="lbl">Limits</p>
+        <p class="txt">This index is developmental and can be revised. It is based on appraisal and sales data, not every home sale. Use the percent change, not the index level.</p>
+      </article>
+
+      <article class="panel wide">
+        <h3>Ranked states: pick a measure</h3>
+        <p class="where">Where: all 50 states · When: depends on the measure you pick</p>
+        <p class="ask">Pick a measure to see which states were highest and lowest.</p>
+        <div class="controls">
+          <label class="ctl">Measure <select id="rank-measure"></select></label>
+          <label class="ctl">Order <select id="rank-order"><option value="desc">Highest first</option><option value="asc">Lowest first</option></select></label>
+        </div>
+        <div class="scroll"><div style="position:relative;height:1000px"><canvas id="c-rank" role="img" aria-label="Ranked bar chart of states for the selected measure"></canvas></div></div>
+        <p class="lbl">What it shows</p>
+        <p class="txt" id="rank-note"></p>
+        <p class="lbl">Limits</p>
+        <p class="txt">States differ in size, and this view does not adjust for it.</p>
+      </article>
+
+      <article class="panel">
+        <h3>Size groups</h3>
+        <p class="where">Where: states grouped by population · When: depends on the measure</p>
+        <p class="ask">The 50 states are split into four equal groups by population, from smallest to largest. Each bar is the average of about 12 or 13 states.</p>
+        <div class="controls">
+          <label class="ctl">Measure <select id="grp-measure"></select></label>
+        </div>
+        <div class="chart tall"><canvas id="c-groups" role="img" aria-label="Bar chart of the average of the selected measure for four state size groups"></canvas></div>
+        <p class="lbl">What it shows</p>
+        <p class="txt">Each bar is a simple average of the states in that group. A small state counts as much as a large one within its group.</p>
+        <p class="lbl">Limits</p>
+        <p class="txt">Groups are based on 2025 population age 16 and over.</p>
+      </article>
+
+      <article class="panel wide">
+        <h3>State profile</h3>
+        <p class="where">Where: one state at a time · When: yearly, 2014 to 2024</p>
+        <p class="ask">Pick a state to see its numbers over time.</p>
+        <div class="controls">
+          <label class="ctl">State <select id="prof-state"></select></label>
+        </div>
+        <div class="grid" id="prof-grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))"></div>
+      </article>
+
+      <article class="panel wide">
+        <h3>All states table</h3>
+        <p class="where">Where: all 50 states · When: the years shown in each column</p>
+        <p class="ask">Search for a state, then scan across the columns.</p>
+        <div class="controls">
+          <label class="ctl">Find a state <input type="search" id="tbl-search" placeholder="Type a state name"></label>
+        </div>
+        <div class="scroll" style="max-height:520px;padding:0"><table aria-label="States by key measures"><thead id="tbl-head"></thead><tbody id="tbl-body"></tbody></table></div>
+        <p class="lbl">Limits</p>
+        <p class="txt">Unemployment and labor force values are yearly averages. Home prices are the FHFA index (1975 = 100). COVID rates are per 100,000 people.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- TESTED, NO CLEAR LINK -->
+  <section id="v-tested" class="view" role="tabpanel" aria-labelledby="t-tested" hidden>
+    <div class="prose">
+      <p>These comparisons show no clear link in this data. Each dot is one state.</p>
+      <div class="callout"><b>How to read a dot chart:</b> each dot is a state. The dots sit at their values on the two axes. If they form a rising or falling line, the two measures move together. If they scatter in a cloud, they don't. The correlation number sums this up from -1 to +1, where 0 means no clear pattern. A cloud does not prove that no link exists. It only means this data does not show one.</div>
+    </div>
+    <div class="grid">
+      <article class="panel wide">
+        <h3>Suicide and unemployment, month by month</h3>
+        <p class="where">Where: U.S. (national) · When: monthly, January 2019 to December 2021</p>
+        <p class="ask">The solid line is unemployment (left axis). The dashed line is suicide deaths per month (right axis).</p>
+        <div class="chart tall"><canvas id="c-monthly" role="img" aria-label="Line chart of monthly unemployment and monthly suicide deaths, January 2019 to December 2021"></canvas></div>
+        <p class="lbl">What it shows</p>
+        <p class="txt">Suicide deaths dipped in April 2020, the month unemployment peaked, and then rose again while unemployment was still high. The two lines do not move together in a clear way.</p>
+        <p class="lbl">Limits</p>
+        <p class="txt">Lockdowns, layoffs, and stimulus payments happened at the same time, so this chart cannot separate their effects. Recent months may be incomplete.</p>
+      </article>
+    </div>
+    <div class="grid" id="tested-grid" style="margin-top:18px"></div>
+  </section>
+
+  <!-- DATA LIMITS -->
+  <section id="v-limits" class="view prose" role="tabpanel" aria-labelledby="t-limits" hidden>
+    <section>
+      <h2>Missing years and incomplete values</h2>
+      <ul>
+        <li><b>2020 household income:</b> the Census did not publish a 1-year estimate, so that year is blank.</li>
+        <li><b>State COVID counts for 2024 and 2025:</b> incomplete, so the state map stops at 2023. National counts run through 2024.</li>
+        <li><b>Withheld counts:</b> the CDC hides counts from 1 to 9, and the Census marks some business counts as withheld. Totals can be understated where that happens.</li>
+        <li><b>Inflation for 2025:</b> left out, because the year was not complete.</li>
+        <li><b>Business counts for 2017:</b> the file was not included.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Level of detail</h2>
+      <ul>
+        <li><b>National only:</b> the jobs, births, inflation, income, home price, and top-causes panels are national.</li>
+        <li><b>Yearly averages:</b> state unemployment and labor force values are yearly averages, so a short spike can be averaged away.</li>
+        <li><b>Counts, not rates:</b> the top-causes panel shows how many people died, not how often, so population growth can affect it.</li>
+        <li><b>Crude (raw) COVID rates:</b> the map and rankings do not adjust for age, so older states can look worse.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Changes in definitions</h2>
+      <ul>
+        <li><b>Business industry codes</b> changed in 2017, so counts before and after may shift slightly.</li>
+        <li><b>Cause-of-death list:</b> COVID-19 was added as a cause in 2020.</li>
+        <li><b>Home prices</b> are FHFA's developmental index. Values can be revised when new data arrives.</li>
+        <li><b>Cost of living</b> (BEA price index) is available only through 2024.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>What the data cannot tell us</h2>
+      <ul>
+        <li>Correlation does not show cause. Stimulus payments and expanded unemployment benefits in 2020 and 2021 may have supported incomes, which would weaken any link between job losses and income.</li>
+        <li>Suicide is one measure of mental health, not the whole picture.</li>
+        <li>Death counts use the underlying cause only. A death with COVID as a contributing cause is counted under its underlying cause.</li>
+      </ul>
+    </section>
+  </section>
+
+  <!-- SOURCES -->
+  <section id="v-src" class="view prose" role="tabpanel" aria-labelledby="t-src" hidden>
+    <section>
+      <h2>Sources</h2>
+      <ul>
+        <li><b>Unemployment, labor force, and labor force participation:</b> Bureau of Labor Statistics, Local Area Unemployment Statistics, annual averages by state, and monthly national unemployment (FRED series UNRATE).</li>
+        <li><b>COVID deaths by state:</b> CDC National Center for Health Statistics, provisional counts by state of residence.</li>
+        <li><b>Causes of death, births, and all deaths, national:</b> CDC WONDER, Underlying Cause of Death (1999 to 2020 and 2018 to 2024 single-race files, ICD-10 113 cause list), and Natality.</li>
+        <li><b>Suicide deaths, monthly:</b> CDC WONDER, Underlying Cause of Death.</li>
+        <li><b>Home prices:</b> Federal Housing Finance Agency, House Price Index, All-Transactions, annual state and national data (last updated March 31, 2026).</li>
+        <li><b>Median household income:</b> Census Bureau, American Community Survey 1-year estimates, table B19013.</li>
+        <li><b>Personal income and population:</b> Bureau of Economic Analysis, SAINC1, and Census population estimates.</li>
+        <li><b>Cost of living:</b> Bureau of Economic Analysis, Regional Price Parities, all items.</li>
+        <li><b>Inflation:</b> Bureau of Labor Statistics, Consumer Price Index for All Urban Consumers (CPI-U), annual averages.</li>
+        <li><b>Hospitals, funeral homes, and cemeteries:</b> Census Bureau, County Business Patterns, NAICS 622, 812210, and 812220.</li>
+        <li><b>Population by race:</b> Census Bureau, American Community Survey 1-year estimates, table B03002.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Method notes</h2>
+      <ul>
+        <li>Correlations are Pearson correlations across the 50 states.</li>
+        <li>Purchasing power = real median income divided by (price index ÷ 100).</li>
+        <li>Inflation for a year = change in the annual average CPI from the year before.</li>
+        <li>Size groups use quartiles of the 2025 population age 16 and over.</li>
+        <li>Washington, D.C. is excluded from state charts, to match the other files.</li>
+      </ul>
+    </section>
+  </section>
+</div>
+
+<script>
+const DATA = {"states": {"Alabama": {"g": 2, "un": [6.8, 6.1, 5.8, 4.5, 3.9, 3.2, 6.4, 3.4, 2.5, 2.5, 3, 2.9], "lfpr": [56.9, 56.7, 57, 56.9, 57.3, 57.7, 57.2, 56.4, 56.7, 57.1, 57.6, 57.6], "hpi": [346.43, 354.53, 364.01, 375.57, 391.99, 410.1, 427, 472.94, 548.13, 587, 613.18, 628.36], "inc": [58246, 60805, 62049, 63205, 63927, 65147, null, 64055, 65646, 65732, 68413, null], "rpp": [90.175, 89.741, 90.609, 90.065, 87.378, 88.303, 87.569, 88.062, 88.021, 89.097, 88.823, null], "cov": [null, null, null, null, null, null, 131.6, 206.8, 86, 19, 9.4, 0.4], "cbp": {"Hospitals": [[125, 83166, 3986174], [125, 81485, 4080007], [125, 84126, 4147962], [null, null, null], [118, 98355, 5005010], [117, 91323, 5015183], [121, 98142, 5051327], [126, 88372, 5261723], [127, 93894, 5604933], [126, 95784, 6136225]], "Funeral homes and funeral services": [[277, 2115, 64490], [281, 2093, 67378], [286, 2101, 68498], [null, null, null], [281, 2059, 66668], [277, 1989, 67055], [279, 1994, 70991], [284, 1990, 77574], [281, 2058, 78384], [285, 2052, 80283]], "Cemeteries and crematories": [[76, 557, 16762], [76, 579, 17724], [73, 548, 17051], [null, null, null], [78, 473, 14086], [74, 427, 14255], [72, 415, 13256], [72, 401, 14702], [73, 392, 14645], [68, 395, 15402]]}}, "Alaska": {"g": 0, "un": [6.7, 6.3, 6.6, 6.6, 6.1, 5.6, 8.3, 6.4, 4.4, 4.3, 4.5, 4.7], "lfpr": [67.4, 66.7, 66.2, 66, 65, 64.6, 63.5, 64.3, 64.8, 65, 65.1, 65.7], "hpi": [433.62, 446.58, 454.94, 460.89, 467.8, 477.51, 488.79, 521.25, 584.81, 624.53, 653.99, 680.74], "inc": [97347, 99639, 102536, 96117, 95319, 95029, null, 92489, 96940, 91533, 98182, null], "rpp": [102.386, 103.287, 104.073, 104.833, 104.565, 103.041, 101.339, 104.907, 102.101, 103.297, 102.359, null], "cov": [null, null, null, null, null, null, 16.8, 85.2, 12.1, 0, 0, 0], "cbp": {"Hospitals": [[30, 14417, 1028676], [30, 14496, 1072098], [30, 14676, 1103752], [null, null, null], [28, 15645, 1268847], [28, 16092, 1336931], [26, 15997, 1362925], [28, 16532, 1398025], [33, 15191, 1379275], [32, 15413, 1620414]], "Funeral homes and funeral services": [[15, 63, 2647], [15, 63, 2766], [15, 66, 2943], [null, null, null], [15, 71, 3167], [15, 69, 3276], [15, 67, 3523], [15, 73, 4114], [16, 92, 5192], [18, 92, 5256]], "Cemeteries and crematories": [[5, 13, 386], [4, 11, 481], [4, 11, 505], [null, null, null], [7, 22, 1071], [7, 125, 3010], [7, 44, 2685], [7, 46, 3010], [6, 26, 1461], [5, 22, 897]]}}, "Arizona": {"g": 2, "un": [6.8, 6.1, 5.5, 5, 4.8, 4.8, 7.8, 5, 3.8, 3.7, 3.7, 4.3], "lfpr": [59.9, 60.1, 60.2, 60.6, 61.2, 62, 61.4, 61.3, 61.5, 62, 61.9, 62.1], "hpi": [485.09, 512.51, 548.53, 589.72, 635.54, 679, 723.66, 861.81, 1045.39, 1067.56, 1110.34, 1120.76], "inc": [68089, 69942, 71842, 74314, 75959, 78144, null, 82046, 82031, 81690, 83630, null], "rpp": [97.944, 97.865, 98.622, 97.915, 97.381, 97.779, 99.203, 96.6, 99.992, 100.742, 100.677, null], "cov": [null, null, null, null, null, null, 117.7, 192.4, 84.3, 17.8, 6.3, 1.6], "cbp": {"Hospitals": [[122, 96347, 5687008], [122, 96822, 5960948], [126, 97804, 5911643], [null, null, null], [113, 102209, 6805832], [109, 99397, 6928436], [108, 101614, 7145238], [114, 100055, 7495934], [124, 98909, 7671622], [121, 106082, 9073226]], "Funeral homes and funeral services": [[139, 1083, 35111], [136, 1064, 35731], [143, 1087, 36454], [null, null, null], [141, 1069, 37868], [139, 1055, 39093], [142, 1090, 43249], [140, 1179, 47569], [139, 1273, 51326], [138, 1237, 52689]], "Cemeteries and crematories": [[40, null, null], [39, 327, 13595], [41, 343, 13410], [null, null, null], [42, 341, 13525], [43, 348, 14345], [44, 374, 15320], [45, 380, 16779], [50, 431, 20807], [50, 476, 23468]]}}, "Arkansas": {"g": 1, "un": [5.9, 5, 4, 3.7, 3.6, 3.5, 6.1, 4, 3.2, 3.2, 3.5, 4.1], "lfpr": [58.1, 58.3, 58.1, 58, 57.9, 58.1, 57.4, 56.5, 57.4, 57.8, 58.2, 58.7], "hpi": [359.57, 367.7, 376.67, 390.03, 406.34, 420.32, 431.9, 480.5, 559.67, 608.19, 635, 656.56], "inc": [56113, 57042, 59469, 60245, 60338, 61644, null, 62409, 60979, 62021, 63740, null], "rpp": [89.395, 89.013, 89.298, 88.561, 87.144, 87.744, 88.165, 88.902, 86.913, 86.81, 86.937, null], "cov": [null, null, null, null, null, null, 124, 176.4, 88.7, 11, 5.4, 0], "cbp": {"Hospitals": [[100, 56206, 2614217], [102, 53826, 2689112], [102, 54928, 2781391], [null, null, null], [100, 59439, 3558775], [102, 59818, 3619019], [102, 59782, 3648902], [110, 57359, 3880728], [111, 65775, 4548030], [120, 67340, 4912857]], "Funeral homes and funeral services": [[218, 1455, 42152], [223, 1480, 43214], [220, 1470, 43291], [null, null, null], [221, 1478, 44754], [221, 1474, 44537], [215, 1434, 45502], [210, 1327, 45076], [213, 1336, 48047], [211, 1336, 48213]], "Cemeteries and crematories": [[50, 184, 3544], [48, 168, 3701], [46, 169, 3539], [null, null, null], [44, 148, 3915], [44, 139, 4039], [46, 143, 4165], [43, 144, 4579], [48, 172, 5610], [43, 163, 5304]]}}, "California": {"g": 3, "un": [7.6, 6.2, 5.5, 4.8, 4.3, 4.1, 10.1, 7.3, 4.3, 4.7, 5.3, 5.5], "lfpr": [62.4, 62.2, 62.2, 62.3, 62.3, 62.4, 60.9, 61.1, 61.7, 62.2, 62.2, 62.4], "hpi": [1031.79, 1091.48, 1176.22, 1252, 1332.76, 1376.02, 1407.55, 1586.52, 1838, 1871.32, 1953.02, 1967.71], "inc": [84224, 87611, 90864, 94309, 96512, 101296, null, 100879, 100713, 100926, 102784, null], "rpp": [109.926, 110.685, 109.956, 110.998, 111.882, 111.134, 111.944, 111.918, 112.591, 112.195, 110.72, null], "cov": [null, null, null, null, null, null, 77.4, 130.2, 58.3, 17.5, 10.9, 5.1], "cbp": {"Hospitals": [[542, 525199, 38679472], [522, 525490, 39914602], [512, 538164, 41620717], [null, null, null], [500, 566860, 48750585], [513, 569720, 50487116], [572, 582538, 52305893], [617, 582060, 54081552], [668, 597588, 59127466], [702, 620841, 65430786]], "Funeral homes and funeral services": [[744, 6938, 266671], [742, 6880, 285484], [742, 6851, 286332], [null, null, null], [766, 6569, 305145], [768, 6688, 323467], [769, 6772, 341359], [790, 7110, 405607], [803, 7744, 447968], [794, 7636, 474979]], "Cemeteries and crematories": [[247, 3217, 160568], [252, 3259, 172793], [256, 3355, 175879], [null, null, null], [271, 3319, 177075], [269, 3445, 186711], [277, 3539, 193291], [283, 3574, 223835], [288, 4321, 277120], [287, 4498, 307228]]}}, "Colorado": {"g": 2, "un": [5, 3.7, 3.1, 2.6, 3, 2.7, 6.8, 5.5, 3.1, 3.3, 4.1, 4], "lfpr": [67.7, 66.8, 67, 67.8, 68.6, 68.6, 67.2, 68, 68.1, 68.1, 67.8, 67.2], "hpi": [646.04, 708.2, 782.3, 850.64, 920.91, 965.21, 993.21, 1123.09, 1307.61, 1333.94, 1367.22, 1369], "inc": [83367, 86808, 88109, 90779, 92251, 97124, null, 97727, 98239, 98168, 99668, null], "rpp": [103.068, 103.048, 102.716, 102.946, 100.29, 102.491, 103.774, 102.765, 102.26, 101.856, 103.052, null], "cov": [null, null, null, null, null, null, 81.2, 104.5, 59.3, 14, 2.7, 0.4], "cbp": {"Hospitals": [[115, 80945, 4697427], [113, 82705, 4925891], [113, 87574, 5178554], [null, null, null], [119, 89862, 5827552], [115, 89311, 6148805], [117, 94088, 6482519], [123, 92718, 6783987], [127, 86892, 6906662], [121, 94027, 7717696]], "Funeral homes and funeral services": [[126, null, 25725], [129, 911, 26562], [125, 917, 26522], [null, null, null], [138, 979, 30972], [139, 1014, 32231], [132, 991, 32607], [138, 1128, 40372], [129, 1035, 39344], [122, 953, 46225]], "Cemeteries and crematories": [[49, null, 11762], [49, 340, 12712], [50, 355, 12913], [null, null, null], [50, 298, 11190], [48, 282, 11646], [50, 295, 12106], [51, 297, 13586], [54, 398, 17392], [54, 432, 21086]]}}, "Connecticut": {"g": 1, "un": [6.6, 5.6, 4.9, 4.4, 3.9, 3.6, 8, 6.4, 4, 3.2, 3.3, 4], "lfpr": [65.9, 65.9, 65.9, 66.1, 66, 66.3, 64.6, 63.2, 65.3, 64.3, 64.4, 64.2], "hpi": [565.26, 572.92, 573.51, 579.72, 589.05, 602.28, 620.89, 695.25, 791.04, 873.64, 945.59, 1003.17], "inc": [95260, 96910, 98502, 97413, 97885, 99273, null, 99529, 97279, 96852, 98576, null], "rpp": [107.015, 107.536, 107.477, 107.228, 104.015, 103.915, 105.119, 102.886, 106.362, 104.201, 103.61, null], "cov": [null, null, null, null, null, null, 162.5, 84.5, 68.8, 13.2, 4.6, 0], "cbp": {"Hospitals": [[47, 68284, 4291098], [53, 67904, 4376033], [55, 67460, 4305317], [null, null, null], [50, 66208, 4546415], [49, 67265, 4651840], [89, 69606, 4972683], [90, 69835, 5159887], [90, 69269, 5147214], [44, 55879, 4458346]], "Funeral homes and funeral services": [[211, 1262, 56960], [211, 1260, 58776], [211, 1298, 57045], [null, null, null], [212, 1253, 58498], [210, 1264, 58876], [210, 1224, 59869], [205, 1145, 61860], [199, 1246, 62555], [193, 1160, 59591]], "Cemeteries and crematories": [[87, 434, 18057], [85, 427, 18765], [88, 421, 18935], [null, null, null], [88, 403, 18369], [88, 433, 18917], [86, 403, 18958], [88, 410, 21912], [89, 442, 22982], [87, 450, 24540]]}}, "Delaware": {"g": 0, "un": [5.6, 4.8, 4.5, 4.4, 3.7, 3.6, 7.5, 5.5, 4.2, 3.9, 3.9, 4.8], "lfpr": [61.4, 61.9, 62, 62.2, 62.2, 62, 61.4, 61.4, 60.9, 60.9, 60, 59.8], "hpi": [484.28, 495, 505.44, 514.71, 534.82, 553.8, 572.24, 634.3, 723.24, 782.16, 835.64, 862.08], "inc": [81209, 83203, 82840, 82550, 83086, 88371, null, 84464, 90398, 85965, 89837, null], "rpp": [99.708, 97.913, 98.478, 98.499, 99.252, 98.824, 96.791, 97.425, 98.007, 98.759, 99.808, null], "cov": [null, null, null, null, null, null, 85.4, 110.4, 51.9, 0, 0, 0], "cbp": {"Hospitals": [[17, 20102, 1329990], [17, 20770, 1357108], [19, 21114, 1414533], [null, null, null], [15, 22029, 1565169], [15, 22072, 1661680], [15, 22691, 1802684], [15, 22400, 1764052], [15, 23171, 2068571], [19, 24430, 2250756]], "Funeral homes and funeral services": [[46, 403, 14083], [45, 415, 15250], [46, 430, 15818], [null, null, null], [46, 489, 18133], [46, 475, 18314], [45, 468, 18748], [43, 476, 20150], [49, 577, 24210], [55, 566, 24424]], "Cemeteries and crematories": [[17, 84, 2789], [16, 61, 2479], [16, 55, 2203], [null, null, null], [18, 66, 2488], [18, 57, 2500], [17, 56, 2593], [18, 52, 2682], [17, 60, 3379], [16, 56, 3162]]}}, "Florida": {"g": 3, "un": [6.5, 5.5, 4.9, 4.3, 3.6, 3.2, 8, 4.7, 3, 2.9, 3.4, 3.9], "lfpr": [59.9, 59.3, 59.3, 59.3, 59.3, 59.5, 57.5, 58, 58.8, 59, 58.5, 57.8], "hpi": [415.87, 452.97, 494.94, 536.52, 579.82, 611.59, 642.31, 742.73, 920.38, 998.46, 1032.58, 1027.11], "inc": [64546, 67136, 68223, 69077, 71108, 74583, null, 74925, 76239, 77459, 79780, null], "rpp": [100.894, 101.29, 101.087, 100.871, 100.318, 99.645, 100.604, 101.389, 102.284, 103.636, 103.414, null], "cov": [null, null, null, null, null, null, 95.8, 176.6, 76.8, 24.8, 16.5, 4.9], "cbp": {"Hospitals": [[368, 302588, 16674439], [322, 300143, 17134837], [318, 312486, 17640676], [null, null, null], [304, 331397, 20151165], [303, 339036, 21123147], [349, 349565, 21633414], [366, 336755, 22973880], [414, 350172, 25519672], [405, 369683, 28082823]], "Funeral homes and funeral services": [[628, 5641, 177143], [637, 5337, 172352], [639, 5351, 172598], [null, null, null], [654, 4982, 176410], [661, 5043, 183802], [672, 5111, 190488], [675, 5148, 212732], [663, 5589, 218127], [645, 5610, 234891]], "Cemeteries and crematories": [[201, 2063, 81148], [210, 2271, 93195], [213, 2344, 92772], [null, null, null], [207, 2073, 83624], [211, 2191, 87985], [212, 2147, 88071], [220, 2095, 104444], [236, 2293, 113091], [219, 2254, 110104]]}}, "Georgia": {"g": 3, "un": [7.1, 6.1, 5.4, 4.8, 4, 3.6, 6.5, 3.9, 3.1, 3.2, 3.4, 3.4], "lfpr": [62.1, 61.1, 62.4, 63.8, 63.2, 62.8, 61.4, 61.8, 61.9, 62, 61.6, 60.9], "hpi": [347.63, 368.02, 390.46, 414.26, 445.55, 471.16, 490.74, 554.28, 667.96, 722.85, 757.03, 773.38], "inc": [67073, 69605, 71844, 73791, 75331, 78050, null, 79080, 80126, 78855, 82096, null], "rpp": [94.962, 94.717, 94.991, 95.275, 94.832, 94.392, 94.478, 95.713, 95.678, 96.494, 96.293, null], "cov": [null, null, null, null, null, null, 91.7, 162.3, 68, 17.7, 9.7, 1.1], "cbp": {"Hospitals": [[197, 159534, 8151255], [197, 157370, 8415752], [204, 161414, 8753345], [null, null, null], [192, 163900, 9465405], [190, 166299, 9979683], [190, 171902, 9902873], [207, 171469, 10900451], [203, 176058, 11810597], [206, 186416, 13609865]], "Funeral homes and funeral services": [[422, 3423, 97121], [426, 3356, 101926], [427, 3334, 100809], [null, null, null], [441, 3274, 103574], [441, 3191, 105175], [440, 3155, 113242], [445, 3231, 125535], [442, 3450, 132240], [442, 3416, 133755]], "Cemeteries and crematories": [[112, null, 26714], [110, 727, 28154], [115, 745, 28677], [null, null, null], [113, 673, 26113], [113, 674, 26785], [110, 664, 28776], [111, 688, 32134], [113, 691, 33592], [121, 744, 36441]]}}, "Hawaii": {"g": 0, "un": [4.2, 3.4, 2.9, 2.2, 2.4, 2.5, 11.6, 6, 3.2, 2.9, 2.8, 2.4], "lfpr": [61.6, 61.7, 62.1, 62, 61.5, 61.1, 59.1, 59.5, 59.9, 60.2, 60.2, 60.6], "hpi": [847.51, 894.1, 951.72, 986.29, 1030.54, 1060.86, 1061.12, 1146.56, 1363.23, 1455.74, 1505.23, 1549.11], "inc": [94640, 99817, 99948, 102137, 102839, 104648, null, 100820, 101711, 100716, 103396, null], "rpp": [110.596, 111.504, 109.901, 110.466, 110.929, 111.767, 113.279, 112.564, 111.148, 109.703, 109.951, null], "cov": [null, null, null, null, null, null, 13.9, 31.5, 20.5, 0, 0, 0], "cbp": {"Hospitals": [[26, 22041, 1430448], [26, 22646, 1517504], [26, 23217, 1584146], [null, null, null], [31, 22227, 1717829], [28, 22062, 1694912], [28, 21838, 1701817], [29, 21017, 1782489], [28, 21400, 1817320], [29, 21332, 1972537]], "Funeral homes and funeral services": [[20, 252, 7423], [20, 256, 7902], [20, 287, 8711], [null, null, null], [21, 388, 11940], [19, 302, 9835], [18, 281, 9151], [19, 264, 9657], [21, 297, 11167], [20, 276, 11935]], "Cemeteries and crematories": [[13, 263, 8608], [13, 264, 9165], [13, 270, 9559], [null, null, null], [12, 142, 5248], [10, 132, 5020], [10, 138, 5119], [9, 137, 5652], [9, 126, 6211], [8, 114, 6991]]}}, "Idaho": {"g": 1, "un": [4.4, 3.9, 3.7, 3.2, 2.9, 2.9, 5.5, 3.6, 2.9, 3.2, 3.6, 3.7], "lfpr": [63.5, 63.8, 63.9, 64, 64.1, 64.4, 63.5, 63.2, 63.4, 63.6, 63.8, 63.3], "hpi": [429.22, 454.11, 487.69, 532.96, 597.49, 664.38, 722.15, 888.76, 1065.41, 1063.09, 1104.93, 1130.8], "inc": [65087, 65573, 69493, 68593, 71263, 76815, null, 78979, 80069, 79182, 83302, null], "rpp": [93.691, 94.281, 92.998, 94.518, 91.736, 92.437, 91.023, 91.563, 91.802, 92.236, 95.494, null], "cov": [null, null, null, null, null, null, 71.6, 131.8, 39.1, 0, 0, 0], "cbp": {"Hospitals": [[56, 29859, 1492772], [55, 29880, 1605780], [55, 30435, 1683875], [null, null, null], [52, 29782, 1748607], [54, 29071, 1821513], [56, 28820, 1802656], [58, 28961, 1972385], [64, 29865, 1985236], [63, 30872, 2234627]], "Funeral homes and funeral services": [[75, 380, 13369], [73, 370, 13331], [73, 400, 13117], [null, null, null], [70, 366, 13581], [67, 357, 13598], [66, 346, 13086], [68, 345, 15425], [61, 362, 15454], [60, 331, 14541]], "Cemeteries and crematories": [[10, 33, 1316], [10, 39, 1291], [11, 37, 1311], [null, null, null], [9, 35, 1137], [9, 30, 1250], [10, 33, 1033], [11, 36, 1856], [11, 53, 1563], [12, 50, 1966]]}}, "Illinois": {"g": 3, "un": [7.2, 6, 5.9, 5, 4.4, 4, 9.3, 6.1, 4.6, 4.5, 5, 4.6], "lfpr": [64.8, 64.8, 65.3, 64.6, 64.7, 64.6, 62.6, 63, 64.3, 64.4, 65, 64.2], "hpi": [427.88, 440.82, 453.36, 465.09, 476.13, 488.56, 493.92, 532.36, 596.96, 641.69, 686.28, 725.39], "inc": [78119, 80939, 81771, 82734, 83375, 87126, null, 85788, 84385, 84850, 85401, null], "rpp": [99.697, 98.903, 99.498, 100.254, 100.416, 99.453, 100.315, 101.321, 101.205, 98.752, 99.958, null], "cov": [null, null, null, null, null, null, 131.4, 99.4, 75.7, 17.4, 9.7, 3.2], "cbp": {"Hospitals": [[236, 244042, 13596476], [233, 245888, 14113422], [231, 244845, 14147801], [null, null, null], [224, 241593, 14554573], [225, 241145, 14832677], [230, 237527, 15162702], [249, 226578, 14886592], [264, 238164, 17031301], [255, 237688, 18760951]], "Funeral homes and funeral services": [[800, 4330, 163301], [800, 4248, 168207], [786, 4251, 168176], [null, null, null], [783, 4135, 172613], [776, 4090, 172422], [765, 3956, 179770], [769, 3886, 185468], [766, 4238, 200591], [743, 4083, 203644]], "Cemeteries and crematories": [[258, 1403, 62708], [255, 1410, 64052], [253, 1420, 65740], [null, null, null], [242, 1306, 60810], [236, 1295, 63611], [234, 1278, 64149], [236, 1303, 68446], [235, 1498, 82732], [233, 1314, 70860]]}}, "Indiana": {"g": 2, "un": [5.9, 4.8, 4.4, 3.5, 3.4, 3.3, 7.3, 3.9, 3.1, 3.4, 4, 3.7], "lfpr": [63.4, 63.8, 64.7, 64.3, 64.9, 64.6, 63, 62.8, 63.3, 63.4, 63.7, 63.8], "hpi": [369.35, 381.49, 394.89, 412.63, 440.3, 464.59, 483.71, 541.96, 624.1, 674.21, 710.95, 741.82], "inc": [67243, 68638, 70173, 71162, 71472, 72538, null, 74546, 73469, 73408, 73852, null], "rpp": [92.638, 91.415, 91.346, 90.875, 92.802, 92.829, 91.763, 92.579, 91.875, 92.097, 93.329, null], "cov": [null, null, null, null, null, null, 131, 143.8, 92, 21.5, 12, 4.3], "cbp": {"Hospitals": [[170, 132054, 6235905], [173, 126070, 6315371], [174, 122989, 6165955], [null, null, null], [178, 127842, 6852692], [175, 126611, 6886574], [173, 125976, 6957856], [176, 127414, 7612723], [194, 132280, 8752077], [191, 131243, 8999920]], "Funeral homes and funeral services": [[514, 3561, 104596], [503, 3509, 111120], [502, 3632, 108594], [null, null, null], [500, 3403, 108258], [499, 3393, 112296], [496, 3387, 118023], [497, 3319, 124516], [496, 3603, 132463], [476, 3287, 125475]], "Cemeteries and crematories": [[151, null, 25654], [149, 910, 26356], [148, 928, 26083], [null, null, null], [157, 877, 33458], [153, 790, 29274], [156, 789, 28545], [157, 771, 31926], [162, 779, 34625], [160, 861, 36919]]}}, "Iowa": {"g": 1, "un": [4.3, 3.7, 3.6, 3.1, 2.6, 2.7, 5.2, 3.9, 2.9, 3, 3.2, 3.5], "lfpr": [70.2, 69.9, 69.8, 68.8, 69.1, 69.9, 66.8, 66.9, 67.6, 67.5, 67, 67.8], "hpi": [380.65, 391.03, 404.4, 419.97, 435.57, 449.27, 457.22, 494.16, 556.86, 596.42, 626.4, 646.57], "inc": [73044, 74349, 75449, 76926, 76868, 77686, null, 77940, 76552, 75475, 77488, null], "rpp": [90.97, 89.528, 89.439, 89.213, 91.797, 91.804, 90.61, 89.77, 88.351, 88.769, 87.762, null], "cov": [null, null, null, null, null, null, 144.8, 109.8, 69.1, 14.2, 5.1, 0], "cbp": {"Hospitals": [[137, 67254, 3240033], [135, 65826, 3357529], [137, 67785, 3419546], [null, null, null], [129, 69709, 3854999], [128, 68670, 3922956], [129, 68403, 3945443], [136, 68799, 4164850], [135, 68816, 4552002], [135, 72194, 4782112]], "Funeral homes and funeral services": [[356, 1735, 54345], [357, 1754, 56304], [353, 1757, 56648], [null, null, null], [339, 1727, 57767], [339, 1693, 58215], [324, 1657, 62191], [324, 1634, 66438], [335, 1951, 71460], [323, 1709, 68592]], "Cemeteries and crematories": [[94, 274, 8036], [93, 280, 8437], [93, 278, 8688], [null, null, null], [89, 275, 8990], [90, 289, 9203], [88, 292, 9442], [90, 262, 8496], [84, 289, 8658], [81, 299, 9895]]}}, "Kansas": {"g": 1, "un": [4.5, 4.2, 4, 3.6, 3.3, 3.2, 5.8, 3.4, 2.8, 2.9, 3.5, 3.8], "lfpr": [68.1, 67.8, 67.5, 67, 66.9, 67.2, 66.9, 66.6, 66.8, 67, 67.3, 67.8], "hpi": [350.53, 361.26, 375.88, 392.37, 411.72, 428.19, 445.09, 492.26, 560.36, 602.02, 637.57, 663.38], "inc": [71401, 73221, 73689, 74105, 74641, 78185, null, 76187, 75823, 74313, 77501, null], "rpp": [93.138, 92.814, 92.059, 91.555, 92.436, 92.734, 92.251, 91.27, 89.609, 89.908, 90.068, null], "cov": [null, null, null, null, null, null, 113.3, 133.6, 80.5, 10.8, 2.6, 0.7], "cbp": {"Hospitals": [[150, 57452, 2772975], [153, 57020, 2904286], [153, 58993, 2989417], [null, null, null], [162, 60312, 3379762], [161, 58896, 3371281], [163, 62881, 3645180], [160, 61394, 3836171], [164, 61418, 4065049], [164, 62140, 4287818]], "Funeral homes and funeral services": [[231, 1422, 40701], [233, 1329, 41036], [230, 1360, 41155], [null, null, null], [232, 1326, 42462], [240, 1349, 42713], [238, 1406, 44916], [236, 1368, 47557], [228, 1294, 44182], [227, 1286, 50037]], "Cemeteries and crematories": [[49, 239, 6899], [50, 238, 7307], [47, 237, 7386], [null, null, null], [45, 231, 8468], [47, 223, 8830], [46, 219, 8987], [45, 199, 9022], [50, 188, 7773], [48, 192, 8885]]}}, "Kentucky": {"g": 2, "un": [6.4, 5.3, 5.1, 4.8, 4.2, 4.1, 6.5, 4.4, 4, 4.2, 4.8, 4.6], "lfpr": [58.6, 57.5, 58.1, 58.7, 58.6, 58.9, 57.1, 57.4, 57.8, 57.7, 58.2, 58.3], "hpi": [404.57, 417, 432.6, 453.44, 473.61, 493.32, 511.79, 564.29, 644.95, 695.67, 738.75, 767.85], "inc": [58420, 61416, 62588, 63536, 64421, 65854, null, 66027, 65280, 64576, 66224, null], "rpp": [91.063, 90.733, 90.676, 89.985, 89.071, 89.597, 89.078, 89.246, 89.402, 89.89, 90.159, null], "cov": [null, null, null, null, null, null, 96, 190.8, 131.1, 37.1, 17.5, 5.8], "cbp": {"Hospitals": [[140, 86323, 3976115], [151, 87430, 4237670], [154, 88151, 4380544], [null, null, null], [133, 87533, 4779360], [132, 87635, 4943548], [138, 88669, 5041672], [145, 85972, 5345023], [142, 86371, 5633456], [138, 87523, 5933752]], "Funeral homes and funeral services": [[386, 2422, 74306], [384, 2456, 76965], [385, 2422, 79082], [null, null, null], [381, 2412, 79769], [378, 2364, 79698], [384, 2356, 82884], [378, 2365, 87327], [380, 2495, 95462], [368, 2386, 88768]], "Cemeteries and crematories": [[95, 564, 17210], [99, 562, 18657], [104, 560, 19162], [null, null, null], [96, 564, 19271], [96, 597, 20613], [97, 587, 21564], [98, 613, 24427], [100, 582, 22383], [98, 623, 25069]]}}, "Louisiana": {"g": 1, "un": [6.2, 6.3, 6, 5.1, 4.8, 4.6, 8.6, 5.6, 3.7, 3.7, 4.3, 4.3], "lfpr": [60.3, 60.2, 59.2, 58.7, 58.7, 58.6, 57.3, 57.6, 58.1, 58.3, 58.1, 58.2], "hpi": [429.28, 442.87, 457.31, 468.61, 478.39, 489.13, 499.94, 529.11, 583.37, 592.52, 599.86, 610.62], "inc": [60591, 62112, 60558, 60607, 61419, 64315, null, 61885, 60962, 61524, 62591, null], "rpp": [93.401, 92.834, 93.6, 92.364, 90.755, 91.159, 91.141, 91.373, 90.489, 88.7, 88.207, null], "cov": [null, null, null, null, null, null, 149.1, 152.4, 63.4, 10.1, 5.7, 0], "cbp": {"Hospitals": [[246, 101840, 4970691], [229, 100229, 5225194], [225, 101303, 5317099], [null, null, null], [228, 101413, 5661366], [230, 104822, 6013707], [233, 100726, 5973099], [238, 101595, 6549849], [232, 102290, 7071976], [237, 105719, 7561375]], "Funeral homes and funeral services": [[249, 1912, 60024], [251, 1954, 62864], [253, 1928, 62654], [null, null, null], [257, 1916, 66736], [260, 2010, 69557], [256, 1937, 70985], [261, 1942, 79027], [252, 1989, 80033], [249, 1956, 80177]], "Cemeteries and crematories": [[64, null, 14292], [60, 427, 14413], [62, 433, 14250], [null, null, null], [60, 376, 12173], [60, 382, 12372], [59, 411, 13262], [60, 395, 14744], [65, 460, 16168], [61, 404, 18172]]}}, "Maine": {"g": 0, "un": [5.6, 4.4, 3.8, 3.4, 3.2, 2.9, 5.1, 4.7, 2.8, 2.6, 3, 3.4], "lfpr": [64.1, 63, 63.3, 63.5, 63, 62.4, 59.6, 60.4, 59.3, 59.5, 60.1, 59.9], "hpi": [563.77, 577.16, 598.34, 627.66, 664.33, 697.29, 730.69, 837.89, 989.8, 1104.56, 1170.63, 1225.97], "inc": [67265, 69945, 71200, 73915, 71287, 74202, null, 76951, 76503, 77905, 78453, null], "rpp": [92.521, 95.879, 97.216, 97.559, 97.649, 95.607, 97.888, 97.343, 100.746, 97.964, 97.05, null], "cov": [null, null, null, null, null, null, 16.1, 85.3, 47.3, 3.1, 1.5, 0], "cbp": {"Hospitals": [[49, 34591, 2073606], [48, 35238, 2070821], [46, 36204, 2168694], [null, null, null], [45, 36620, 2350624], [45, 35514, 2423010], [45, 34528, 2464060], [48, 33024, 2353193], [48, 32787, 2540909], [46, 32378, 2695398]], "Funeral homes and funeral services": [[98, 535, 15051], [96, 527, 15451], [94, 534, 14962], [null, null, null], [89, 493, 16154], [84, 468, 16865], [86, 483, 17399], [88, 498, 18843], [86, 591, 23348], [79, 646, 27136]], "Cemeteries and crematories": [[34, 65, 3121], [33, 61, 3381], [35, 70, 3726], [null, null, null], [33, 75, 3504], [33, 64, 2887], [31, 66, 2960], [30, 61, 2993], [29, 62, 3287], [27, 49, 2592]]}}, "Maryland": {"g": 2, "un": [5.7, 5, 4.2, 4.1, 3.8, 3.4, 6.5, 5.2, 3, 2.2, 3.2, 4], "lfpr": [66.9, 66.8, 66.9, 67.7, 67.8, 68.8, 66.6, 64.9, 64.7, 64.8, 65.1, 64.5], "hpi": [613.44, 627.06, 643.28, 661.97, 681.15, 700.33, 718.32, 786.53, 877.19, 927.39, 976.33, 1002.21], "inc": [100595, 103024, 105896, 106092, 106724, 109227, null, 107171, 104497, 104262, 105613, null], "rpp": [107.879, 107.913, 107.222, 106.75, 106.311, 105.087, 106.396, 106.099, 104.89, 104.602, 104.959, null], "cov": [null, null, null, null, null, null, 104.3, 99, 74.4, 20.5, 10.9, 1.5], "cbp": {"Hospitals": [[77, 106334, 6094236], [73, 104564, 6285175], [73, 103862, 6379469], [null, null, null], [68, 111421, 6898748], [69, 112874, 7154384], [68, 111305, 7135267], [83, 109466, 7513368], [82, 107281, 7719709], [69, 107820, 9015430]], "Funeral homes and funeral services": [[210, 1947, 72252], [208, 1984, 76785], [207, 1985, 77352], [null, null, null], [215, 2002, 80243], [213, 1998, 80832], [216, 1954, 80916], [214, 1898, 87245], [219, 2032, 92971], [215, 2017, 94972]], "Cemeteries and crematories": [[99, 975, 35071], [101, 1036, 38820], [99, 1029, 38579], [null, null, null], [99, 868, 37137], [95, 830, 38256], [95, 822, 37830], [92, 829, 47580], [92, 901, 45988], [92, 919, 48877]]}}, "Massachusetts": {"g": 2, "un": [5.7, 4.8, 4, 3.8, 3.5, 3, 9.3, 5.3, 3.7, 3.5, 4, 4.5], "lfpr": [65.3, 65.2, 65.2, 66, 67.2, 67.2, 65.3, 65.1, 65.3, 65.5, 66.4, 66.5], "hpi": [869.33, 900.65, 944.62, 998.03, 1051.37, 1095.1, 1129.28, 1253.35, 1419.03, 1528.04, 1625.93, 1685.35], "inc": [94052, 95935, 101003, 101638, 102356, 108100, null, 106508, 103944, 105508, 107586, null], "rpp": [104.533, 105.086, 108.161, 107.406, 107.422, 107.151, 109.101, 106.698, 109.431, 107.675, 105.757, null], "cov": [null, null, null, null, null, null, 141, 77.9, 63.9, 22.3, 9.1, 2.1], "cbp": {"Hospitals": [[137, 188854, 11585570], [140, 188449, 12038724], [139, 191991, 12434690], [null, null, null], [123, 195135, 13138103], [123, 198347, 13527439], [121, 203305, 14229032], [132, 204522, 14618217], [134, 205134, 15981822], [138, 208388, 17497391]], "Funeral homes and funeral services": [[395, 2224, 88859], [396, 2276, 93917], [399, 2209, 94837], [null, null, null], [398, 2238, 99794], [394, 2236, 99491], [388, 2276, 102149], [390, 2172, 106002], [389, 2368, 112218], [370, 2246, 113056]], "Cemeteries and crematories": [[120, 717, 34175], [119, 699, 34869], [118, 717, 35222], [null, null, null], [115, 628, 35314], [112, 651, 36762], [108, 632, 36740], [112, 675, 39420], [111, 698, 42413], [111, 715, 44619]]}}, "Michigan": {"g": 3, "un": [7.2, 5.4, 5, 4.6, 4.2, 4.1, 10, 5.7, 4.2, 3.9, 4.7, 5.2], "lfpr": [60.5, 60.4, 61.3, 61.4, 61.6, 61.9, 60.4, 59.2, 60.2, 61.6, 61.9, 61.2], "hpi": [382.18, 401.08, 422.48, 451.03, 480.28, 504.23, 520.3, 580.52, 658.03, 706.2, 753.09, 788.79], "inc": [67788, 69388, 70412, 72118, 72691, 75033, null, 75443, 73690, 73098, 74294, null], "rpp": [95.473, 93.713, 93.637, 92.727, 94.518, 95.359, 94.431, 94.281, 93.589, 94.296, 96.217, null], "cov": [null, null, null, null, null, null, 120.5, 150, 88.1, 24.7, 12.4, 4.1], "cbp": {"Hospitals": [[212, 205213, 11196765], [205, 198689, 11050585], [208, 201824, 11373271], [null, null, null], [184, 200349, 11841574], [183, 197256, 11967428], [185, 197408, 11920749], [190, 192117, 12467751], [204, 192272, 13341424], [188, 206509, 14370929]], "Funeral homes and funeral services": [[567, 4528, 135606], [564, 4507, 140110], [555, 4538, 139478], [null, null, null], [543, 4272, 139393], [536, 4262, 142276], [529, 4229, 145203], [530, 3929, 153310], [537, 4744, 169082], [535, 4366, 162879]], "Cemeteries and crematories": [[142, 1013, 43053], [139, 1194, 44567], [143, 1175, 44786], [null, null, null], [146, 1046, 46524], [119, 809, 38404], [123, 865, 41245], [158, 1091, 59283], [150, 1031, 51907], [156, 1235, 64257]]}}, "Minnesota": {"g": 2, "un": [4.2, 3.8, 3.9, 3.4, 3, 3.3, 6.3, 3.7, 2.4, 2.8, 3.1, 3.9], "lfpr": [70.1, 70.2, 70, 70.1, 69.6, 69.8, 69.7, 67.7, 67.9, 68.2, 68.1, 68.3], "hpi": [510.11, 527.41, 552.01, 584.36, 617.86, 643.57, 661.07, 725.03, 812.82, 848.08, 879.45, 904.05], "inc": [83609, 86237, 87994, 89821, 90151, 93933, null, 92340, 90578, 89900, 89409, null], "rpp": [98.307, 97.678, 97.192, 96.739, 99.599, 98.759, 97.766, 98.396, 97.457, 98.302, 98.621, null], "cov": [null, null, null, null, null, null, 100.5, 92, 63.2, 23, 9, 2.3], "cbp": {"Hospitals": [[149, 110418, 6555408], [144, 109865, 6745199], [142, 112903, 6862116], [null, null, null], [152, 123651, 7872538], [159, 123724, 7924936], [164, 123216, 8084314], [162, 120696, 8535889], [160, 118926, 8767199], [160, 121246, 9803540]], "Funeral homes and funeral services": [[304, 1618, 61409], [303, 1530, 64240], [300, 1608, 64652], [null, null, null], [305, 1591, 64523], [303, 1503, 63467], [303, 1480, 66131], [304, 1509, 70027], [299, 1675, 76430], [302, 1599, 80016]], "Cemeteries and crematories": [[114, 313, 10673], [113, 291, 11266], [114, 304, 11093], [null, null, null], [117, 323, 13304], [116, 329, 12980], [116, 319, 13488], [113, 299, 13215], [114, 328, 15333], [110, 349, 16503]]}}, "Mississippi": {"g": 1, "un": [7.6, 6.5, 6, 5.2, 4.9, 5.5, 7.9, 5.4, 3.8, 3.1, 3.2, 3.8], "lfpr": [55, 55.4, 55.7, 55.7, 55.6, 56.2, 54.8, 55.2, 55.1, 54.5, 55.1, 55.8], "hpi": [304.14, 311.59, 319.31, 326.53, 336.24, 347.26, 355.85, 386.09, 440.49, 466.02, 488.39, 505.65], "inc": [53962, 55138, 56008, 57171, 57331, 57665, null, 57880, 57995, 57270, 60683, null], "rpp": [88.96, 88.264, 88.489, 87.737, 86.157, 86.527, 85.583, 86.222, 87.336, 86.792, 86.953, null], "cov": [null, null, null, null, null, null, 164.4, 202.9, 107.2, 19.1, 11.2, 0.7], "cbp": {"Hospitals": [[110, 72476, 3639574], [105, 69216, 3615506], [104, 70108, 3581610], [null, null, null], [109, 69839, 4095945], [111, 73013, 4231444], [107, 72327, 4248113], [113, 70542, 4432230], [120, 62046, 3918875], [120, 61790, 4158889]], "Funeral homes and funeral services": [[227, 1281, 38168], [231, 1284, 40833], [233, 1332, 41637], [null, null, null], [219, 1207, 40141], [213, 1235, 40818], [211, 1200, 43727], [223, 1253, 48980], [201, 1282, 50081], [201, 1361, 51569]], "Cemeteries and crematories": [[35, 159, 4159], [33, 151, 4323], [34, 156, 4416], [null, null, null], [35, 153, 4548], [34, 143, 4472], [33, 149, 4323], [37, 150, 4792], [36, 140, 4996], [36, 163, 5186]]}}, "Missouri": {"g": 2, "un": [6.2, 5.1, 4.6, 3.8, 3.2, 3.2, 6.1, 4.1, 2.6, 3.1, 3.7, 4], "lfpr": [64.4, 64.5, 64.6, 64, 63.6, 63.9, 62.7, 62.6, 62.6, 63.3, 63.5, 63.6], "hpi": [377.65, 390.42, 406.59, 425.18, 447, 468.38, 486.24, 541.07, 623.49, 672.47, 708.38, 734.81], "inc": [65770, 68239, 69412, 70370, 69846, 72294, null, 73481, 71297, 72423, 73473, null], "rpp": [93.351, 92.262, 91.676, 91.735, 91.806, 92.52, 92.162, 92.012, 90.991, 91.104, 90.817, null], "cov": [null, null, null, null, null, null, 121.6, 139.4, 89, 21.2, 9, 2.5], "cbp": {"Hospitals": [[171, 134451, 6841889], [174, 126875, 6829004], [171, 130517, 7009039], [null, null, null], [167, 129877, 7614547], [169, 130698, 7878863], [166, 133556, 8097654], [171, 131360, 8528972], [186, 139664, 9504351], [181, 147020, 10443005]], "Funeral homes and funeral services": [[429, 2791, 83176], [432, 2829, 87490], [430, 2890, 89178], [null, null, null], [413, 2743, 91992], [400, 2579, 91951], [387, 2923, 108950], [399, 2608, 102440], [405, 2838, 106278], [406, 2784, 106177]], "Cemeteries and crematories": [[131, 637, 20305], [132, 613, 21531], [134, 623, 21604], [null, null, null], [128, 585, 21058], [124, 593, 21741], [117, 587, 22275], [122, 607, 23785], [126, 630, 24969], [122, 625, 27632]]}}, "Montana": {"g": 0, "un": [4.6, 4.3, 4.3, 4.1, 3.7, 3.5, 5.8, 3.4, 2.7, 2.7, 3, 3.3], "lfpr": [63.8, 63.8, 63.6, 63.4, 63.3, 63.7, 62.9, 62.1, 62.7, 63.1, 63, 62.4], "hpi": [610.59, 631.33, 653.56, 688.66, 729.81, 766.1, 799.98, 931.61, 1124.81, 1202.4, 1265.13, 1294.38], "inc": [63003, 67249, 67106, 70118, 70936, 71971, null, 75147, 74399, 74810, 77322, null], "rpp": [95.152, 94.974, 93.862, 94.202, 92.401, 94.24, 91.972, 91.328, 90.179, 91.014, 94.645, null], "cov": [null, null, null, null, null, null, 97.3, 138.9, 34.1, 0, 0, 0], "cbp": {"Hospitals": [[69, 24954, 1295687], [68, 23274, 1254420], [70, 24328, 1319367], [null, null, null], [68, 24959, 1419870], [69, 24685, 1479047], [66, 24871, 1543611], [68, 25380, 1632900], [67, 25304, 1696266], [67, 24772, 1807659]], "Funeral homes and funeral services": [[53, 334, 9747], [54, 323, 9856], [52, 321, 10167], [null, null, null], [57, 350, 10829], [55, 335, 11258], [53, 358, 11760], [53, 355, 12433], [51, 361, 12516], [52, 385, 13061]], "Cemeteries and crematories": [[25, null, 1552], [25, 52, 1675], [26, 50, 1803], [null, null, null], [25, 65, 1888], [24, 62, 1859], [22, 60, 1899], [20, 62, 1959], [21, 62, 2196], [21, 71, 2408]]}}, "Nebraska": {"g": 1, "un": [3.2, 3, 3.1, 3, 2.9, 3.1, 4.3, 2.7, 2.2, 2.3, 2.7, 3], "lfpr": [70.7, 70.1, 69.9, 69.4, 69.8, 70.3, 69.6, 69.3, 69.5, 69.3, 69.4, 70.1], "hpi": [400.03, 415.89, 433.32, 458.58, 482.61, 507.52, 523.56, 579.06, 662.9, 717.4, 752.98, 777.82], "inc": [71649, 74702, 76361, 78765, 76369, 79623, null, 79386, 76562, 78811, 78386, null], "rpp": [91.757, 91.166, 90.767, 89.807, 91.838, 92.531, 92.808, 91.956, 89.844, 90.288, 90.103, null], "cov": [null, null, null, null, null, null, 106.8, 86.7, 48.5, 4.8, 0, 0], "cbp": {"Hospitals": [[106, 41839, 2084720], [108, 41637, 2305680], [108, 42626, 2347077], [null, null, null], [107, 44975, 2449158], [108, 45694, 2541088], [109, 45361, 2700352], [116, 43494, 2761409], [115, 42855, 2937852], [107, 44712, 3281006]], "Funeral homes and funeral services": [[152, 894, 26435], [155, 911, 27444], [151, 887, 27598], [null, null, null], [156, 859, 28391], [152, 853, 27995], [156, 889, 30943], [154, 827, 30938], [153, 939, 35810], [150, 834, 33650]], "Cemeteries and crematories": [[33, 180, 4843], [32, 168, 5043], [32, 171, 5117], [null, null, null], [37, 149, 5064], [37, 140, 5334], [36, 152, 6037], [38, 147, 6577], [37, 166, 7073], [36, 135, 6706]]}}, "Nevada": {"g": 1, "un": [8.2, 6.9, 5.8, 5, 4.4, 4.1, 13.5, 6.8, 5.2, 5.1, 5.4, 5.3], "lfpr": [63.2, 62.7, 62.2, 62.6, 63.4, 64.2, 61.3, 60.1, 61.7, 62.6, 62.8, 63.1], "hpi": [449.49, 494.02, 540.37, 592.06, 669.37, 711.26, 733.36, 849.79, 1005.42, 1008.44, 1067.12, 1090.25], "inc": [69968, 71218, 74018, 76182, 75190, 79682, null, 78741, 79572, 80685, 83269, null], "rpp": [99.184, 98.592, 97.191, 99.854, 96.226, 98.838, 97.191, 95.356, 96.339, 97.861, 99.979, null], "cov": [null, null, null, null, null, null, 102, 178.2, 78.2, 1.6, 0.7, 0], "cbp": {"Hospitals": [[62, 34216, 1962536], [63, 34466, 2122575], [62, 37075, 2201460], [null, null, null], [62, 40516, 2783345], [68, 42219, 2939011], [70, 43517, 3072664], [76, 43540, 3189017], [75, 41822, 3200721], [67, 43954, 3534122]], "Funeral homes and funeral services": [[54, 494, 17809], [56, 471, 18331], [53, 497, 18485], [null, null, null], [58, 521, 22722], [58, 505, 23978], [58, 459, 22079], [63, 509, 24860], [65, 602, 26680], [65, 611, 33049]], "Cemeteries and crematories": [[17, 133, 5143], [18, 130, 5226], [18, 133, 5281], [null, null, null], [18, 113, 4078], [20, 116, 4365], [20, 96, 3402], [20, 127, 5127], [22, 147, 6142], [20, 150, 7120]]}}, "New Hampshire": {"g": 0, "un": [4.3, 3.4, 2.9, 2.8, 2.6, 2.6, 6.7, 3.5, 2.4, 2.3, 2.6, 3.2], "lfpr": [68.6, 68.5, 68.6, 68.2, 68.6, 68.9, 66.8, 65.5, 65.6, 65.3, 65.5, 65.5], "hpi": [584.86, 606.05, 629.61, 664.73, 704.7, 741.16, 778.69, 889.82, 1034.44, 1142.8, 1233.19, 1290.65], "inc": [90478, 95493, 95153, 96379, 96146, 98139, null, 105106, 98998, 102317, 102408, null], "rpp": [102.091, 103.98, 105.096, 105.78, 103.549, 104.001, 105.269, 102.568, 107.847, 105.393, 104.165, null], "cov": [null, null, null, null, null, null, 47.3, 72.7, 40.2, 5, 0, 0], "cbp": {"Hospitals": [[34, 28464, 1571971], [34, 28882, 1620140], [35, 29334, 1683500], [null, null, null], [33, 29600, 1742960], [33, 30011, 1898639], [33, 31153, 1931810], [36, 29533, 2003519], [33, 30750, 2144050], [38, 29335, 2196771]], "Funeral homes and funeral services": [[63, 296, 12702], [64, 294, 13193], [64, 284, 13635], [null, null, null], [67, 310, 14759], [66, 322, 14820], [63, 325, 15143], [61, 288, 15054], [54, 277, 15210], [51, 287, 15808]], "Cemeteries and crematories": [[20, 51, 1633], [19, 51, 1727], [20, 60, 1747], [null, null, null], [20, 40, 2256], [20, 50, 2377], [21, 47, 2742], [20, 53, 3059], [20, 77, 3875], [20, 55, 2973]]}}, "New Jersey": {"g": 3, "un": [6.7, 5.7, 4.9, 4.5, 4, 3.5, 9.5, 6.7, 3.9, 4.3, 4.6, 5.2], "lfpr": [64.2, 64.1, 63.9, 63.4, 63, 63.8, 62.9, 62.9, 63.8, 64.5, 64, 63.6], "hpi": [708.93, 725.24, 741.97, 758.15, 783.14, 809.22, 835.79, 926.27, 1064.7, 1178.33, 1282.34, 1361.35], "inc": [97804, 98100, 102115, 105188, 104798, 107984, null, 106094, 105988, 105427, 107038, null], "rpp": [109.032, 108.973, 109.059, 109.298, 111.019, 111.188, 110.722, 109.157, 108.759, 108.941, 108.805, null], "cov": [null, null, null, null, null, null, 189.2, 104.4, 74.2, 18.3, 9.4, 3.1], "cbp": {"Hospitals": [[123, 151630, 9423908], [119, 151799, 9407301], [121, 156653, 9552334], [null, null, null], [114, 159402, 10435568], [116, 165700, 11063698], [124, 166579, 11547344], [135, 164822, 11634524], [132, 165257, 12420403], [125, 170340, 13746006]], "Funeral homes and funeral services": [[483, 2605, 123983], [478, 2631, 128828], [491, 2675, 129611], [null, null, null], [473, 2624, 125511], [464, 2656, 126578], [464, 2547, 130198], [468, 2513, 134402], [452, 2475, 134758], [447, 2405, 132829]], "Cemeteries and crematories": [[178, 1212, 59147], [170, 1169, 59525], [170, 1147, 60320], [null, null, null], [173, 1142, 63894], [173, 1151, 65845], [166, 1061, 63114], [171, 1099, 70440], [173, 1124, 70159], [178, 1190, 78739]]}}, "New Mexico": {"g": 1, "un": [6.6, 6.6, 6.8, 6.1, 4.9, 5, 7.9, 7.1, 4.1, 3.7, 4.1, 4.2], "lfpr": [58.1, 58.2, 58.2, 58, 57.7, 58, 55.9, 56.3, 56.5, 57.3, 57.7, 57.7], "hpi": [460.98, 468.28, 481.24, 497.13, 516.38, 541.88, 567.72, 632.5, 725.51, 783.04, 825.07, 850.41], "inc": [60929, 61643, 62707, 61394, 60475, 65413, null, 64149, 65703, 65791, 69600, null], "rpp": [95.471, 95.396, 94.46, 95.721, 91.656, 92.969, 91.805, 89.735, 90.929, 90.981, 92.212, null], "cov": [null, null, null, null, null, null, 130.6, 173.6, 92.2, 5.2, 0, 0], "cbp": {"Hospitals": [[66, 34595, 2047379], [64, 35333, 2098536], [61, 35618, 2182711], [null, null, null], [64, 36678, 2464055], [63, 37707, 2574015], [66, 37819, 2623955], [69, 37922, 2596355], [69, 40814, 2789564], [68, 39585, 2941693]], "Funeral homes and funeral services": [[60, 558, 18757], [63, 596, 17909], [65, 618, 18516], [null, null, null], [64, 636, 19328], [61, 571, 18102], [60, 672, 22580], [66, 566, 20041], [65, 634, 22334], [66, 669, 26416]], "Cemeteries and crematories": [[20, null, 2864], [19, 91, 3054], [19, 92, 3139], [null, null, null], [17, 113, 3978], [18, 98, 3934], [19, 120, 4271], [16, 99, 4515], [15, 99, 3757], [14, 106, 3907]]}}, "New York": {"g": 3, "un": [6.3, 5.2, 4.9, 4.6, 4.1, 3.9, 9.8, 7.1, 4.3, 4, 4.2, 4.3], "lfpr": [60.7, 60.7, 60.6, 60.8, 60.6, 60.7, 59.1, 59.5, 60.3, 61, 60.8, 61.1], "hpi": [668.26, 687, 709.36, 742.17, 782.57, 812.24, 839.48, 918.69, 1035.49, 1121.01, 1202.85, 1275.02], "inc": [80070, 82653, 84386, 85232, 86982, 90804, null, 88293, 87519, 86740, 88078, null], "rpp": [108.853, 109.583, 110.086, 109.988, 109.507, 109.426, 110.13, 109.564, 107.557, 107.842, 107.921, null], "cov": [null, null, null, null, null, null, 132.7, 133.6, 83.6, 28, 15, 4.5], "cbp": {"Hospitals": [[266, 429598, 30833689], [305, 432396, 32490222], [304, 442365, 33396944], [null, null, null], [285, 468726, 37709623], [281, 470796, 39303092], [290, 497384, 40933005], [287, 478928, 42110452], [297, 464442, 43525602], [275, 480148, 45102575]], "Funeral homes and funeral services": [[1071, 5352, 223200], [1075, 5317, 228668], [1058, 5356, 231384], [null, null, null], [1054, 5084, 230248], [1045, 5053, 229213], [1038, 5063, 245286], [1035, 4876, 255498], [1035, 5232, 261596], [1027, 5159, 262291]], "Cemeteries and crematories": [[466, 2757, 147770], [461, 2767, 151246], [461, 2788, 153113], [null, null, null], [440, 2773, 159071], [433, 2828, 170607], [421, 2966, 179415], [420, 2634, 167603], [413, 2657, 177198], [411, 2611, 181227]]}}, "North Carolina": {"g": 3, "un": [6.1, 5.7, 5.1, 4.5, 4, 3.9, 7.2, 4.8, 3.7, 3.5, 3.7, 3.8], "lfpr": [61.1, 61.1, 61.2, 61.4, 61.2, 61.5, 59, 59.5, 61.4, 61.2, 60.3, 59.5], "hpi": [407.9, 423.61, 443.23, 467.33, 497.47, 524.61, 545.86, 616.79, 745.74, 811.44, 853.95, 875.31], "inc": [63313, 64968, 67853, 69285, 69047, 72208, null, 73630, 74234, 74810, 75904, null], "rpp": [93.826, 93.588, 93.801, 93.025, 92.894, 91.866, 91.345, 93.734, 94.013, 94.399, 94.326, null], "cov": [null, null, null, null, null, null, 77.8, 145.7, 80.5, 26.2, 14.2, 4.3], "cbp": {"Hospitals": [[157, 183330, 9604709], [155, 180869, 9921901], [156, 188189, 10394788], [null, null, null], [217, 197396, 11668076], [210, 196979, 11828057], [204, 201261, 12179577], [208, 199718, 13041172], [220, 199723, 13614188], [194, 186641, 14100317]], "Funeral homes and funeral services": [[519, 4197, 126711], [518, 4102, 130106], [531, 4199, 133104], [null, null, null], [522, 4242, 135296], [516, 4169, 137867], [516, 4399, 144825], [520, 4254, 154504], [517, 4411, 155539], [518, 4329, 163925]], "Cemeteries and crematories": [[146, 827, 22976], [156, 863, 25680], [158, 901, 25832], [null, null, null], [153, 735, 24572], [156, 762, 26237], [153, 902, 33832], [150, 731, 29112], [153, 733, 27942], [150, 806, 31433]]}}, "North Dakota": {"g": 0, "un": [2.7, 2.8, 3, 2.6, 2.4, 2.2, 5, 3.1, 2.1, 2, 2.4, 2.6], "lfpr": [71.8, 70.7, 70.7, 70.6, 70, 70, 69, 68.4, 68.8, 69, 69.3, 69.7], "hpi": [485.97, 507.61, 519.42, 525.41, 532.74, 544.79, 550.75, 578.08, 638.29, 671.57, 700, 735.95], "inc": [80275, 82255, 81363, 81225, 81845, 81320, null, 79032, 79173, 80855, 79920, null], "rpp": [92.45, 91.063, 91.588, 88.664, 91.168, 93.191, 91.816, 90.962, 88.703, 88.174, 88.959, null], "cov": [null, null, null, null, null, null, 146.8, 66.3, 24.7, 0, 0, 0], "cbp": {"Hospitals": [[47, 21109, 1175686], [48, 20057, 1181576], [48, 20766, 1137981], [null, null, null], [52, 21900, 1424922], [52, 21586, 1485781], [52, 21730, 1488090], [52, 21232, 1556816], [51, 19861, 1613931], [51, 20646, 1633043]], "Funeral homes and funeral services": [[52, 257, 10045], [48, 292, 9629], [46, 287, 9693], [null, null, null], [46, 269, 9804], [47, 275, 10293], [45, 271, 11081], [44, 270, 11083], [47, 251, 11454], [44, 272, 11339]], "Cemeteries and crematories": [[27, 42, 984], [27, 43, 1037], [27, 36, 963], [null, null, null], [25, 34, 933], [23, 34, 961], [23, 33, 996], [22, 45, 976], [22, 41, 1028], [22, 33, 1104]]}}, "Ohio": {"g": 3, "un": [5.8, 5, 5, 4.9, 4.5, 4.1, 8.2, 5.3, 4, 3.7, 4.4, 4.6], "lfpr": [62.8, 62.6, 62.8, 63, 62.8, 63.2, 61.6, 61.5, 61.6, 62.1, 62.7, 62.5], "hpi": [337.25, 348.9, 362.45, 380.22, 402.3, 421.99, 440.46, 489.93, 557.52, 603.43, 643.91, 674.68], "inc": [67055, 69376, 70200, 70952, 71940, 73847, null, 73974, 72297, 71604, 74112, null], "rpp": [93.019, 92.218, 92.333, 91.931, 92.985, 93.289, 91.935, 92.223, 91.506, 91.903, 92.774, null], "cov": [null, null, null, null, null, null, 120.1, 175.6, 108.9, 26.8, 14.8, 4.6], "cbp": {"Hospitals": [[250, 270415, 14895306], [248, 259047, 14465295], [248, 262153, 15025314], [null, null, null], [270, 272919, 16595286], [272, 274622, 16775188], [267, 278732, 17256108], [261, 281412, 18484825], [267, 282622, 19906321], [267, 292786, 22009264]], "Funeral homes and funeral services": [[876, 5507, 169909], [865, 5602, 180274], [864, 5597, 181628], [null, null, null], [843, 5241, 181477], [834, 5282, 183119], [829, 5287, 192069], [821, 5078, 205639], [819, 5238, 201476], [784, 4998, 196002]], "Cemeteries and crematories": [[274, 1782, 57839], [270, 1753, 60762], [263, 1775, 60737], [null, null, null], [268, 1716, 59657], [267, 1773, 62272], [258, 1733, 64078], [264, 1670, 68110], [261, 1726, 70905], [255, 1715, 73483]]}}, "Oklahoma": {"g": 1, "un": [4.3, 4.3, 4.6, 4, 3.3, 3.1, 6.3, 4, 3, 3.1, 3.2, 3.4], "lfpr": [61, 61.7, 61.2, 61.1, 61.2, 61.2, 60.7, 61, 61.5, 62.8, 63.1, 63], "hpi": [376.38, 389.83, 399.33, 412.83, 424.91, 441, 457.92, 504.41, 580.81, 622.74, 650.13, 666.98], "inc": [64636, 65970, 65964, 65737, 66571, 68566, null, 66328, 65645, 65654, 67889, null], "rpp": [91.825, 91.369, 91.514, 90.881, 89.646, 89.332, 89.63, 89.883, 88.807, 88.68, 87.843, null], "cov": [null, null, null, null, null, null, 127.9, 215.5, 122.8, 26.6, 12, 2.4], "cbp": {"Hospitals": [[160, 71223, 3610929], [158, 69893, 3776362], [164, 72344, 3961395], [null, null, null], [161, 70246, 4171275], [156, 70332, 4202248], [152, 74673, 4497836], [158, 75457, 4773304], [163, 77025, 5276553], [164, 77733, 5760383]], "Funeral homes and funeral services": [[266, 1807, 47493], [255, 1745, 49291], [253, 1667, 48539], [null, null, null], [252, 1661, 49943], [244, 1659, 48935], [241, 1614, 50825], [243, 1669, 56794], [243, 2130, 66712], [242, 2146, 68017]], "Cemeteries and crematories": [[46, 273, 7706], [44, 269, 7551], [45, 271, 7734], [null, null, null], [50, 233, 8244], [46, 238, 8545], [46, 214, 8182], [48, 211, 8402], [43, 243, 10518], [43, 214, 9988]]}}, "Oregon": {"g": 1, "un": [6.7, 5.5, 4.8, 4.1, 4, 3.7, 7.6, 5.2, 4, 3.8, 4.3, 5.2], "lfpr": [61.7, 61.6, 62.3, 62.4, 61.8, 61.5, 61.3, 61.9, 62.3, 62.3, 62.6, 62.9], "hpi": [693.76, 748.6, 830.97, 897.2, 953.2, 994.96, 1029.32, 1170.56, 1335.27, 1345.64, 1375.8, 1388.62], "inc": [69458, 73550, 77173, 79083, 81318, 84445, null, 85024, 83229, 84696, 87462, null], "rpp": [99.745, 101.119, 99.593, 101.474, 104.657, 103.811, 103.243, 103.15, 106.612, 104.812, 103.361, null], "cov": [null, null, null, null, null, null, 33.4, 97.3, 67.6, 15.7, 2.5, 0], "cbp": {"Hospitals": [[69, 59863, 4113359], [69, 61053, 4451109], [71, 65480, 4567897], [null, null, null], [68, 72220, 5412633], [69, 71200, 5547013], [68, 72212, 5671560], [70, 75471, 6100425], [71, 76545, 6400742], [69, 78002, 7358093]], "Funeral homes and funeral services": [[130, 842, 26408], [126, 836, 27569], [130, 841, 27467], [null, null, null], [129, 869, 30234], [127, 849, 31379], [128, 843, 31325], [128, 828, 35223], [127, 957, 38993], [127, 959, 40108]], "Cemeteries and crematories": [[57, null, 9628], [53, 300, 10040], [51, 305, 10287], [null, null, null], [53, 232, 8704], [54, 247, 9492], [52, 224, 8387], [55, 241, 9652], [56, 263, 11725], [55, 292, 13598]]}}, "Pennsylvania": {"g": 3, "un": [6, 5.4, 5.3, 5, 4.4, 4.3, 8.8, 5.9, 4.2, 3.7, 3.8, 4.3], "lfpr": [62.6, 62.9, 63.2, 62.7, 62.7, 63.1, 62.3, 61.3, 61.7, 62.2, 62, 61.6], "hpi": [474.91, 485.72, 497.72, 515.75, 538.21, 559.66, 580.02, 637.77, 720.33, 773.67, 819.72, 858.55], "inc": [72394, 75661, 76334, 77747, 78086, 79918, null, 81929, 78983, 78001, 79585, null], "rpp": [97.207, 98.147, 97.767, 99.102, 98.151, 97.979, 97.717, 96.145, 96.256, 97.4, 97.572, null], "cov": [null, null, null, null, null, null, 132.1, 161.1, 94.6, 28.2, 16, 5.7], "cbp": {"Hospitals": [[301, 276641, 14587875], [313, 273959, 14898737], [352, 279707, 15788654], [null, null, null], [314, 299268, 17763175], [339, 299723, 18274146], [332, 293629, 18278617], [389, 289268, 19462415], [368, 302471, 21201789], [307, 310311, 22339907]], "Funeral homes and funeral services": [[1006, 4928, 169739], [1014, 4954, 177413], [1004, 5021, 178290], [null, null, null], [1005, 4962, 184645], [992, 4872, 184879], [984, 4831, 191552], [968, 4694, 202971], [960, 5018, 210213], [966, 4901, 203513]], "Cemeteries and crematories": [[542, 2537, 83653], [540, 2589, 86837], [520, 2524, 85743], [null, null, null], [516, 2407, 89911], [506, 2388, 90445], [497, 2309, 85203], [499, 2185, 91026], [494, 2237, 98628], [496, 2418, 105746]]}}, "Rhode Island": {"g": 0, "un": [7.8, 6, 5.2, 4.5, 4, 3.5, 9.2, 5.6, 3.2, 3, 4.2, 4.5], "lfpr": [65.2, 64.8, 64.4, 64.5, 64.5, 64.4, 63.7, 63.9, 63.7, 63.9, 64.6, 64.1], "hpi": [639.35, 667.9, 699.35, 740.47, 787.42, 822.25, 858.07, 973.64, 1127.37, 1237.03, 1344.08, 1416.71], "inc": [74648, 78881, 81283, 83887, 82490, 89621, null, 87930, 90046, 89780, 85701, null], "rpp": [100.26, 102.014, 101.59, 102.403, 102.033, 102.39, 101.771, 102.19, 104.453, 102.065, 102.28, null], "cov": [null, null, null, null, null, null, 149.3, 83.9, 41.1, 0, 0, 0], "cbp": {"Hospitals": [[18, 24821, 1463545], [17, 23907, 1481385], [17, 24488, 1468094], [null, null, null], [15, 24452, 1520919], [17, 25282, 1573683], [17, 25711, 1592416], [17, 25100, 1642054], [17, 25056, 1735045], [15, 24865, 1797443]], "Funeral homes and funeral services": [[72, 428, 16714], [70, 411, 17616], [70, 435, 17620], [null, null, null], [71, 396, 16827], [72, 401, 17578], [71, 413, 18014], [71, 397, 19146], [67, 468, 19852], [65, 428, 21314]], "Cemeteries and crematories": [[34, 154, 6312], [34, 168, 6734], [33, 164, 6433], [null, null, null], [30, 204, 9280], [29, 213, 9688], [28, 215, 10462], [29, 223, 12531], [29, 256, 19029], [29, 228, 16120]]}}, "South Carolina": {"g": 2, "un": [6.3, 5.9, 4.9, 4.2, 3.4, 2.8, 6, 3.9, 3.2, 3, 4.1, 4.5], "lfpr": [59.1, 59.3, 58.8, 58.2, 58, 58.3, 57.9, 57.6, 57.7, 58.1, 58.4, 58.4], "hpi": [391.45, 409.42, 428.76, 452.56, 479.28, 504.09, 521.64, 583.08, 696.93, 765.12, 807.87, 836.52], "inc": [61520, 64164, 66400, 66419, 67061, 70805, null, 70476, 70531, 71641, 74254, null], "rpp": [93.231, 93.32, 93.636, 92.84, 92.244, 91.49, 90.873, 93.61, 93.342, 93.477, 93.749, null], "cov": [null, null, null, null, null, null, 106.5, 191.5, 92, 22.2, 10.7, 1.8], "cbp": {"Hospitals": [[106, 77665, 4054120], [102, 76769, 4196589], [105, 78531, 4406736], [null, null, null], [102, 80638, 4519609], [92, 79035, 4609289], [86, 80502, 4672120], [102, 75776, 4449716], [102, 75474, 4818746], [103, 80314, 5489180]], "Funeral homes and funeral services": [[266, 2234, 62365], [264, 2218, 64143], [266, 2303, 65376], [null, null, null], [273, 2315, 70222], [266, 2307, 70920], [270, 2369, 77997], [274, 2489, 87551], [279, 2588, 92057], [274, 2534, 92525]], "Cemeteries and crematories": [[71, 544, 14114], [70, 535, 14713], [69, 521, 14816], [null, null, null], [70, 456, 14862], [75, 436, 14990], [73, 452, 15805], [84, 416, 16612], [93, 450, 17166], [96, 486, 19952]]}}, "South Dakota": {"g": 0, "un": [3.4, 3, 3, 3, 2.8, 2.7, 4.1, 2.6, 1.9, 1.8, 1.8, 2.1], "lfpr": [69.8, 69.8, 69.6, 69.4, 69.3, 69.5, 69, 68.7, 68.4, 68.2, 68, 68.2], "hpi": [440.52, 456.38, 476.64, 500.5, 524.17, 547.03, 563.59, 627.17, 734.8, 789.03, 817.35, 842.79], "inc": [69328, 72014, 73061, 74235, 72149, 74969, null, 78585, 76706, 75873, 78904, null], "rpp": [89.357, 87.799, 87.282, 87.223, 91.206, 91.818, 91.32, 90.105, 87.851, 88.149, 88.586, null], "cov": [null, null, null, null, null, null, 153.2, 79.7, 36.9, 0, 0, 0], "cbp": {"Hospitals": [[62, 30033, 1585224], [64, 29767, 1640252], [63, 30909, 1717161], [null, null, null], [65, 31826, 2027205], [66, 31895, 2086664], [67, 31577, 2018611], [69, 31222, 2127558], [70, 30915, 2230142], [70, 31249, 2191820]], "Funeral homes and funeral services": [[75, 359, 11841], [71, 397, 12661], [77, 336, 12922], [null, null, null], [77, 353, 13857], [73, 381, 13768], [73, 331, 14662], [72, 379, 15831], [73, 379, 16057], [69, 389, 16306]], "Cemeteries and crematories": [[21, null, 947], [22, 30, 986], [20, 37, 985], [null, null, null], [20, 36, 915], [19, 31, 885], [19, 30, 831], [17, 26, 826], [18, 30, 992], [17, 26, 858]]}}, "Tennessee": {"g": 2, "un": [6.5, 5.5, 4.7, 3.7, 3.5, 3.3, 7.4, 4.5, 3.4, 3.3, 3.4, 3.5], "lfpr": [59.7, 59.7, 60.1, 60.4, 61, 61.8, 60.5, 60.4, 60.4, 60, 60, 60.6], "hpi": [393.25, 410.74, 434.42, 464.96, 498.19, 526.36, 549.9, 627.73, 761.3, 817.74, 856.81, 877.1], "inc": [60328, 64214, 65120, 67430, 67150, 70609, null, 70924, 71784, 71458, 73891, null], "rpp": [92.785, 92.812, 93.81, 93.04, 89.649, 91.262, 90.502, 90.58, 91.8, 92.094, 91.87, null], "cov": [null, null, null, null, null, null, 100.4, 189.1, 101.6, 27.8, 11.8, 3.9], "cbp": {"Hospitals": [[172, 136026, 6875142], [170, 134428, 7272712], [173, 139141, 7402799], [null, null, null], [159, 139103, 8292254], [153, 139682, 8517426], [153, 144117, 8757594], [169, 142510, 9367953], [179, 139701, 10468196], [169, 144432, 11352277]], "Funeral homes and funeral services": [[375, 2983, 99869], [377, 3005, 106843], [394, 3140, 106960], [null, null, null], [399, 3213, 111417], [392, 3216, 114420], [379, 2987, 109910], [398, 3152, 128898], [404, 3255, 126158], [438, 3409, 140229]], "Cemeteries and crematories": [[123, 812, 26580], [125, 903, 31359], [121, 897, 30714], [null, null, null], [128, 873, 36505], [127, 918, 40436], [124, 937, 38119], [127, 883, 43828], [121, 788, 36764], [116, 812, 38089]]}}, "Texas": {"g": 3, "un": [5.2, 4.5, 4.6, 4.4, 3.9, 3.5, 7.7, 5.6, 3.9, 4, 4.1, 4.2], "lfpr": [64.8, 63.8, 63.8, 63.8, 63.9, 64, 63, 63.6, 64.1, 64.7, 64.8, 64.8], "hpi": [407.46, 434.81, 465.18, 497.89, 528.11, 552.31, 570.4, 642.12, 760.15, 793.33, 811.81, 818.3], "inc": [72124, 75594, 75876, 77762, 77732, 80637, null, 79560, 79518, 80068, 81819, null], "rpp": [98.437, 98.291, 98.078, 97.435, 97.805, 98.507, 98.759, 98.402, 97.411, 97.14, 97.057, null], "cov": [null, null, null, null, null, null, 106.9, 165.7, 63.4, 15.9, 9.6, 3.1], "cbp": {"Hospitals": [[689, 393531, 21762214], [669, 397363, 23076341], [679, 400973, 23403429], [null, null, null], [629, 410696, 25538882], [633, 414080, 26761082], [635, 430358, 27021487], [639, 420365, 29181086], [665, 437028, 32948754], [712, 460981, 37237592]], "Funeral homes and funeral services": [[975, 8482, 254188], [986, 8618, 275642], [986, 8749, 277352], [null, null, null], [1002, 8472, 275135], [995, 7545, 261264], [989, 7733, 282694], [1033, 8032, 309559], [1009, 8769, 354025], [982, 8635, 359570]], "Cemeteries and crematories": [[302, 2524, 88314], [301, 2409, 91631], [296, 2433, 91929], [null, null, null], [289, 2196, 85914], [286, 2218, 89010], [285, 2077, 84467], [283, 2074, 91596], [291, 2325, 103005], [282, 2292, 107687]]}}, "Utah": {"g": 1, "un": [3.6, 3.5, 3.3, 3.1, 2.9, 2.5, 4.8, 2.8, 2.4, 2.7, 3.3, 3.6], "lfpr": [67.6, 68, 68.5, 68.9, 68.5, 68.5, 68.1, 68.1, 68.8, 69.1, 68.6, 68], "hpi": [569.42, 596.81, 641.48, 697.93, 760.82, 818.06, 862.86, 1026.19, 1232.67, 1240.6, 1285.42, 1316.5], "inc": [82849, 85454, 88501, 89782, 91560, 95428, null, 94394, 98092, 98707, 99201, null], "rpp": [97.937, 97.636, 97.091, 98.721, 96.018, 97.246, 95.259, 94.481, 94.59, 95.716, 98.864, null], "cov": [null, null, null, null, null, null, 38.9, 70.2, 26.8, 0, 0, 0], "cbp": {"Hospitals": [[59, 39569, 1934159], [58, 39734, 2027509], [81, 41143, 2121044], [null, null, null], [65, 43213, 2424723], [63, 42814, 2576148], [63, 43360, 2535658], [65, 43671, 2561067], [67, 43300, 2922315], [69, 50309, 3319051]], "Funeral homes and funeral services": [[80, 680, 23810], [79, 684, 25414], [85, 708, 26474], [null, null, null], [97, 797, 30267], [93, 782, 30508], [90, 754, 31974], [91, 742, 35306], [94, 801, 37305], [100, 848, 40242]], "Cemeteries and crematories": [[16, null, null], [16, 231, 8628], [16, 231, 8754], [null, null, null], [16, 70, 2924], [15, 73, 3015], [16, 82, 3005], [15, 75, 3554], [15, 95, 4359], [15, 94, 4121]]}}, "Vermont": {"g": 0, "un": [3.9, 3.5, 3.1, 2.9, 2.5, 2.1, 5.6, 3.5, 2.3, 1.9, 2.3, 2.7], "lfpr": [67.9, 67.3, 67.2, 67.2, 66.9, 66.3, 63.4, 62.1, 63.2, 64.3, 64.9, 64.1], "hpi": [541.09, 548.93, 555.48, 570.49, 588.74, 610.37, 631.85, 709.97, 824.16, 932.85, 1000.41, 1036.55], "inc": [73662, 77410, 77367, 75538, 77928, 79336, null, 86056, 81396, 85806, 84907, null], "rpp": [97.937, 100.029, 98.224, 100.337, 100.204, 99.604, 102.132, 98.694, 101.033, 97.142, 97.958, null], "cov": [null, null, null, null, null, null, 3.3, 0, 6.4, 0, 0, 0], "cbp": {"Hospitals": [[16, 14159, 803008], [16, 14587, 843697], [16, 14874, 879137], [null, null, null], [16, 15705, 945414], [16, 15980, 977427], [17, 14819, 989731], [17, 14605, 1018389], [17, 14599, 1091736], [16, 14318, 1166527]], "Funeral homes and funeral services": [[52, 212, 6649], [51, 220, 7149], [52, 207, 7144], [null, null, null], [45, 173, 6910], [45, 172, 6898], [47, 173, 7493], [44, 159, 6993], [42, 171, 7741], [39, 175, 8151]], "Cemeteries and crematories": [[29, null, 857], [26, 37, 828], [26, 27, 660], [null, null, null], [23, 23, 796], [26, 22, 753], [22, 14, 717], [22, 20, 748], [21, 21, 776], [19, 20, 571]]}}, "Virginia": {"g": 3, "un": [5.1, 4.4, 4, 3.6, 3, 2.8, 6.5, 3.9, 2.7, 2.7, 2.9, 3.4], "lfpr": [66, 65, 64.8, 65.4, 65.4, 65.7, 64.2, 63.5, 64.8, 65.9, 65.3, 64.3], "hpi": [551.66, 565.17, 577.83, 596.08, 617.82, 642.12, 663.59, 727.12, 828.56, 893.19, 951.53, 986.93], "inc": [88262, 90004, 91367, 93955, 93051, 96279, null, 96193, 94467, 95020, 94513, null], "rpp": [103.454, 103.57, 102.777, 101.222, 101.957, 100.053, 101.003, 102.3, 102.026, 101.331, 101.104, null], "cov": [null, null, null, null, null, null, 69.4, 115.3, 73.4, 21.5, 11.6, 3.1], "cbp": {"Hospitals": [[124, 124521, 6643036], [125, 123417, 6885417], [125, 119894, 7064906], [null, null, null], [120, 120945, 7906197], [120, 122247, 8326809], [124, 124372, 8569996], [127, 118012, 8769162], [132, 115327, 8823194], [134, 121665, 9675391]], "Funeral homes and funeral services": [[392, 3611, 107915], [385, 3672, 112547], [391, 3664, 113544], [null, null, null], [388, 3634, 117394], [383, 3640, 119931], [385, 3682, 123230], [378, 3461, 134774], [380, 3956, 148171], [380, 3772, 147135]], "Cemeteries and crematories": [[134, null, 30962], [129, 887, 33322], [130, 877, 33150], [null, null, null], [127, 748, 29144], [127, 755, 31609], [126, 748, 27635], [128, 607, 28684], [128, 701, 35092], [127, 721, 37284]]}}, "Washington": {"g": 2, "un": [5.9, 5.5, 5.2, 4.7, 4.4, 4.2, 8.7, 5.2, 4.1, 4.2, 4.5, 4.7], "lfpr": [63.1, 63.1, 63.5, 63.8, 64.3, 65.5, 63.9, 63.2, 63.9, 64.1, 63.3, 62.8], "hpi": [816.35, 875.96, 970.22, 1068.7, 1166.58, 1233.74, 1297.01, 1486.45, 1738.46, 1759.96, 1832.08, 1865.78], "inc": [83453, 87107, 90015, 93225, 94969, 99089, null, 100095, 100444, 99958, 102004, null], "rpp": [103.92, 104.4, 105.56, 107.035, 107.124, 107.971, 107.859, 108.804, 110.035, 108.37, 107.013, null], "cov": [null, null, null, null, null, null, 46.5, 80.2, 54.7, 17.7, 8.8, 0], "cbp": {"Hospitals": [[114, 109958, 7017664], [118, 100073, 7024838], [122, 104194, 7295279], [null, null, null], [124, 118869, 9052841], [123, 118858, 9020321], [123, 119293, 9282568], [130, 121323, 9749592], [138, 126208, 11176110], [123, 132802, 12633174]], "Funeral homes and funeral services": [[176, 1183, 41814], [178, 1208, 44535], [184, 1206, 44913], [null, null, null], [177, 1172, 45887], [171, 1156, 46062], [169, 1183, 47739], [175, 1203, 54159], [174, 1398, 62628], [166, 1227, 64466]], "Cemeteries and crematories": [[98, 546, 21467], [104, 553, 22568], [102, 598, 22131], [null, null, null], [97, 558, 21798], [96, 544, 22783], [98, 616, 26448], [99, 588, 28028], [99, 644, 31671], [94, 547, 28681]]}}, "West Virginia": {"g": 0, "un": [6.5, 6.5, 6.1, 5.2, 5.1, 4.9, 8.3, 5.1, 3.9, 3.9, 4.1, 4.2], "lfpr": [53.7, 53.5, 53.3, 53.5, 54.4, 54.7, 53.9, 53.8, 54.6, 55.1, 55.1, 54.5], "hpi": [294.58, 299.82, 305.33, 308.55, 315.83, 322.23, 330.14, 356.21, 394.21, 419.1, 443.79, 462.17], "inc": [55837, 57075, 58196, 57093, 56537, 61516, null, 60888, 59766, 59114, 62398, null], "rpp": [89.864, 90.557, 89.805, 88.966, 89.411, 88.518, 87.334, 90.981, 89.157, 89.633, 89.497, null], "cov": [null, null, null, null, null, null, 74.6, 227.9, 134.8, 21.7, 4, 0], "cbp": {"Hospitals": [[72, 51196, 2460477], [72, 49572, 2630767], [72, 52220, 2733153], [null, null, null], [61, 52882, 3081183], [65, 52486, 3286235], [76, 50896, 3195545], [73, 52930, 3261866], [72, 44617, 3022208], [73, 56733, 3874482]], "Funeral homes and funeral services": [[220, 1426, 39475], [219, 1334, 40180], [215, 1355, 40709], [null, null, null], [203, 1296, 41217], [199, 1270, 41256], [201, 1305, 44241], [197, 1260, 45673], [193, 1356, 47548], [196, 1307, 45451]], "Cemeteries and crematories": [[100, null, 11029], [99, 487, 11990], [101, 488, 11995], [null, null, null], [100, 417, 11469], [96, 407, 12050], [95, 393, 10368], [93, 331, 11378], [90, 338, 11005], [88, 349, 12126]]}}, "Wisconsin": {"g": 2, "un": [5.3, 4.4, 3.9, 3.3, 3, 3.2, 6.4, 3.8, 2.8, 2.8, 3, 3.2], "lfpr": [68, 67.8, 68.1, 68, 67.4, 66.8, 66.1, 65.9, 65.2, 65.4, 65.3, 64.5], "hpi": [419.76, 431.67, 449.07, 471.88, 498, 522.26, 536.13, 590.16, 676.88, 748.7, 800.38, 843.9], "inc": [71562, 75574, 76206, 77892, 77917, 80805, null, 79752, 78101, 78854, 79527, null], "rpp": [93.799, 93.287, 93.173, 93.531, 94.028, 94.476, 92.666, 93.309, 92.401, 93.22, 94.095, null], "cov": [null, null, null, null, null, null, 102.7, 101.9, 70.8, 16.1, 6.2, 3.4], "cbp": {"Hospitals": [[150, 107737, 5458412], [153, 109520, 5710536], [157, 109204, 5764467], [null, null, null], [161, 115714, 6641943], [165, 115439, 6682052], [180, 114142, 6725349], [192, 113052, 7005226], [202, 114220, 7603771], [173, 115597, 7961808]], "Funeral homes and funeral services": [[410, 1997, 80758], [412, 1999, 85063], [410, 1980, 84356], [null, null, null], [421, 2021, 86982], [420, 2064, 86566], [406, 2007, 91523], [410, 2027, 98174], [418, 2386, 111830], [413, 2207, 108426]], "Cemeteries and crematories": [[148, 535, 14541], [144, 557, 15731], [140, 534, 16583], [null, null, null], [132, 430, 14846], [124, 417, 15720], [124, 412, 15551], [128, 401, 15603], [125, 372, 16055], [130, 401, 17784]]}}, "Wyoming": {"g": 0, "un": [4.4, 4.2, 5.3, 4.3, 4.1, 3.7, 5.9, 4.5, 3.4, 2.9, 3.1, 3.4], "lfpr": [67.6, 67, 66.7, 66, 65.7, 65.7, 65.3, 63.6, 63.9, 63.7, 62.8, 61.6], "hpi": [526.19, 541.75, 552.34, 560.47, 579.92, 605.51, 628.61, 688.39, 788.73, 833.44, 871.5, 907.5], "inc": [77590, 81789, 80325, 79375, 78957, 81857, null, 77470, 77052, 76512, 77519, null], "rpp": [97.404, 96.941, 97.747, 97.146, 92.372, 94.107, 91.836, 91.44, 91.767, 91.551, 92.691, null], "cov": [null, null, null, null, null, null, 72.2, 168.5, 15.3, 0, 0, 0], "cbp": {"Hospitals": [[35, 11340, 641193], [35, 11185, 665956], [34, 11498, 683336], [null, null, null], [34, 12209, 804604], [35, 12328, 836016], [36, 12750, 897243], [38, 12664, 905961], [38, 12840, 977827], [40, 13361, 1070316]], "Funeral homes and funeral services": [[28, 169, 4601], [27, 168, 5021], [27, 184, 5099], [null, null, null], [26, 185, 5478], [27, 201, 5432], [25, 196, 5759], [27, 217, 6810], [27, 194, 7022], [27, 172, 6259]], "Cemeteries and crematories": [[3, null, null], [3, null, null], [3, 4, 88], [null, null, null], [4, 18, 159], [3, 7, 50], [3, 5, 57], [3, 4, 69], [null, null, null], [4, 13, 225]]}}}, "groups": ["Smallest", "Mid-small", "Mid-large", "Largest"], "nat": {"years": [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025], "unemp": [6.2, 5.3, 4.9, 4.4, 3.9, 3.7, 8.1, 5.3, 3.6, 3.6, 4.0, null], "cpi": [236.736, 237.017, 240.007, 245.12, 251.107, 255.657, 258.811, 270.97, 292.655, 304.702, 313.689, 321.943], "hpi": [548.96, 573.26, 603.82, 636.35, 672.62, 700.56, 721.58, 805.33, 930.1, 983.23, 1031.34, 1060.69], "realinc": [72969, 75760, 77287, 79246, 79409, 82750, null, 82832, 82236, 82117, 83751, null], "births": [3988076, 3978497, 3945875, 3855500, 3791712, 3747540, 3613647, 3664292, 3667758, 3596017, 3628934, null], "deaths": [2626418, 2712630, 2744248, 2813503, 2839205, 2854838, 3383729, 3464231, 3279857, 3090964, 3072666, null], "suicide_age": [13.0, 13.3, 13.5, 14.0, 14.2, 13.9, 13.5, 14.1, 14.2, 14.1, 13.7, null], "covid_deaths": [null, null, null, null, null, null, 350831, 416893, 186552, 49932, 31426, null], "accidents": [135928, 146571, 161374, 169936, 167127, 173040, 200955, 224935, 227039, 222698, 197449, null], "suicide_count": [42826, 44193, 44965, 47173, 48344, 47511, 45979, 48183, 49476, 49316, 48824, null]}, "monthly": {"labels": ["2019/01", "2019/02", "2019/03", "2019/04", "2019/05", "2019/06", "2019/07", "2019/08", "2019/09", "2019/10", "2019/11", "2019/12", "2020/01", "2020/02", "2020/03", "2020/04", "2020/05", "2020/06", "2020/07", "2020/08", "2020/09", "2020/10", "2020/11", "2020/12", "2021/01", "2021/02", "2021/03", "2021/04", "2021/05", "2021/06", "2021/07", "2021/08", "2021/09", "2021/10", "2021/11", "2021/12"], "unemp": [4.0, 3.8, 3.8, 3.7, 3.6, 3.6, 3.7, 3.6, 3.5, 3.6, 3.6, 3.6, 3.6, 3.5, 4.4, 14.8, 13.2, 11.0, 10.2, 8.4, 7.8, 6.9, 6.7, 6.7, 6.4, 6.2, 6.1, 6.1, 5.8, 5.9, 5.4, 5.1, 4.7, 4.5, 4.1, 3.9], "suicide": [3833, 3561, 4161, 4029, 4052, 4050, 4193, 4181, 4109, 4043, 3597, 3702, 4026, 3652, 3952, 3473, 3756, 3960, 4168, 4040, 3908, 3781, 3704, 3559, 3890, 3568, 3996, 3722, 4091, 4087, 4092, 4367, 4232, 4278, 3962, 3898]}, "top5": {"2014": [["Heart disease", 614348], ["Cancer", 591700], ["Chronic lower respiratory disease", 147101], ["Accidents", 135928], ["Stroke", 133103]], "2015": [["Heart disease", 633842], ["Cancer", 595930], ["Chronic lower respiratory disease", 155041], ["Accidents", 146571], ["Stroke", 140323]], "2016": [["Heart disease", 635260], ["Cancer", 598038], ["Accidents", 161374], ["Chronic lower respiratory disease", 154596], ["Stroke", 142142]], "2017": [["Heart disease", 647457], ["Cancer", 599108], ["Accidents", 169936], ["Chronic lower respiratory disease", 160201], ["Stroke", 146383]], "2018": [["Heart disease", 655381], ["Cancer", 599274], ["Accidents", 167127], ["Chronic lower respiratory disease", 159486], ["Stroke", 147810]], "2019": [["Heart disease", 659041], ["Cancer", 599601], ["Accidents", 173040], ["Chronic lower respiratory disease", 156979], ["Stroke", 150005]], "2020": [["Heart disease", 696962], ["Cancer", 602350], ["COVID-19", 350831], ["Accidents", 200955], ["Stroke", 160264]], "2021": [["Heart disease", 695547], ["Cancer", 605213], ["COVID-19", 416893], ["Accidents", 224935], ["Stroke", 162890]], "2022": [["Heart disease", 702880], ["Cancer", 608371], ["Accidents", 227039], ["COVID-19", 186552], ["Stroke", 165393]], "2023": [["Heart disease", 680981], ["Cancer", 613352], ["Accidents", 222698], ["Stroke", 162639], ["Chronic lower respiratory disease", 145357]], "2024": [["Heart disease", 683491], ["Cancer", 619876], ["Accidents", 197449], ["Stroke", 166852], ["Chronic lower respiratory disease", 145643]]}};
+</script>
+<script>
+(function(){
+  const D = DATA, Y = D.nat.years, S = D.states, ST = Object.keys(S).sort();
+  const I = y => Y.indexOf(y);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const C = { unemp:'#0072B2', home:'#E69F00', income:'#009E73', infl:'#CC79A7', covid:'#D55E00', accid:'#56B4E9', suicide:'#404040', grid:'rgba(128,128,128,.25)' };
+  const GROUP_COLORS = ['#56B4E9','#009E73','#E69F00','#D55E00'];
+  const pct = (a,b) => (a==null||b==null||a===0) ? null : (b/a-1)*100;
+  const fmt = (v,d=1) => v==null ? 'Not published' : Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+  const usd = v => v==null ? 'Not published' : '$' + Math.round(v).toLocaleString('en-US');
+  const sgn = (v,d=1) => v==null ? 'Not published' : (v>0?'+':'') + fmt(v,d);
+  const mean = a => { const b=a.filter(x=>x!=null); return b.length ? b.reduce((p,c)=>p+c,0)/b.length : null; };
+  const pear = (xs,ys) => { const p=[]; xs.forEach((x,i)=>{ if(x!=null&&ys[i]!=null) p.push([x,ys[i]]); }); if(p.length<3) return null; const mx=mean(p.map(q=>q[0])), my=mean(p.map(q=>q[1])); let sxy=0,sxx=0,syy=0; p.forEach(([x,y])=>{sxy+=(x-mx)*(y-my); sxx+=(x-mx)**2; syy+=(y-my)**2;}); return sxy/Math.sqrt(sxx*syy); };
+  const sv = (s,k,y) => { const v=S[s][k]; return v ? v[I(y)] : null; };
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  const MEAS = {
+    hp:   {label:'Home price change, 2019 to 2023 (%)', f:s=>pct(sv(s,'hpi',2019),sv(s,'hpi',2023)), d:1, u:'%'},
+    inc:  {label:'Income change, 2019 to 2024 (%)', f:s=>pct(sv(s,'inc',2019),sv(s,'inc',2024)), d:1, u:'%'},
+    un:   {label:'Unemployment change, 2019 to 2020 (points)', f:s=>{const a=sv(s,'un',2019),b=sv(s,'un',2020); return a==null||b==null?null:b-a;}, d:1, u:' pts'},
+    pp:   {label:'Purchasing power change, 2015 to 2024 (%)', f:s=>{const i15=sv(s,'inc',2015),i24=sv(s,'inc',2024),r15=sv(s,'rpp',2015),r24=sv(s,'rpp',2024); if([i15,i24,r15,r24].some(x=>x==null)) return null; return pct(i15/(r15/100), i24/(r24/100));}, d:1, u:'%'},
+    lfpr: {label:'Labor force participation change, 2019 to 2023 (points)', f:s=>{const a=sv(s,'lfpr',2019),b=sv(s,'lfpr',2023); return a==null||b==null?null:b-a;}, d:1, u:' pts'},
+    cov:  {label:'COVID deaths per 100,000, 2020 to 2023 combined', f:s=>{const c=[2020,2021,2022,2023].map(y=>sv(s,'cov',y)); return c.some(x=>x==null)?null:c.reduce((p,q)=>p+q,0);}, d:0, u:''}
+  };
+  const MKEYS = Object.keys(MEAS);
+
+  // Chart defaults
+  Chart.defaults.font.family = '"Atkinson Hyperlegible", Arial, sans-serif';
+  Chart.defaults.font.size = 14;
+  Chart.defaults.color = cv('--fg') || '#1A1A1A';
+  Chart.defaults.borderColor = C.grid;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(26,26,26,.94)';
+  Chart.defaults.plugins.tooltip.titleFont = {size:14,weight:'700'};
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 6;
+  if(reduce){ Chart.defaults.animation = false; }
+
+  const charts = {};
+  function mk(id, cfg){
+    if(charts[id]) charts[id].destroy();
+    const el = document.getElementById(id);
+    if(!el) return null;
+    charts[id] = new Chart(el, cfg);
+    return charts[id];
+  }
+  // COVID shading between two category indices
+  const shade = (from, to, label) => ({
+    id:'shade'+from+'_'+to,
+    beforeDatasetsDraw(chart){
+      const {ctx, chartArea, scales} = chart; const x = scales.x; if(!x||!chartArea) return;
+      const a = x.getPixelForValue(from), b = x.getPixelForValue(to);
+      const l = Math.min(a,b), r = Math.max(a,b);
+      ctx.save(); ctx.fillStyle = cv('--shade') || '#D9D9D9'; ctx.globalAlpha = .45;
+      ctx.fillRect(l, chartArea.top, Math.max(r-l,2), chartArea.bottom-chartArea.top);
+      ctx.globalAlpha = 1; ctx.fillStyle = cv('--fg') || '#1A1A1A'; ctx.font = '13px "Atkinson Hyperlegible", Arial'; ctx.textAlign='left';
+      ctx.fillText(label, l+6, chartArea.top+14); ctx.restore();
+    }
+  });
+
+  // ---------- Tile map (shared by hero) ----------
+  const TILES = [['AK',0,0],['ME',11,0],['VT',10,1],['NH',11,1],['WA',1,2],['ID',2,2],['MT',3,2],['ND',4,2],['MN',5,2],['IL',6,2],['WI',7,2],['MI',8,2],['NY',9,2],['RI',10,2],['MA',11,2],['OR',1,3],['NV',2,3],['WY',3,3],['SD',4,3],['IA',5,3],['IN',6,3],['OH',7,3],['PA',8,3],['NJ',9,3],['CT',10,3],['CA',1,4],['UT',2,4],['CO',3,4],['NE',4,4],['MO',5,4],['KY',6,4],['WV',7,4],['VA',8,4],['MD',9,4],['DE',10,4],['AZ',2,5],['NM',3,5],['KS',4,5],['AR',5,5],['TN',6,5],['NC',7,5],['SC',8,5],['OK',4,6],['LA',5,6],['MS',6,6],['AL',7,6],['GA',8,6],['HI',0,7],['TX',4,7],['FL',9,7]];
+  const ABBR = {Alabama:'AL',Alaska:'AK',Arizona:'AZ',Arkansas:'AR',California:'CA',Colorado:'CO',Connecticut:'CT',Delaware:'DE',Florida:'FL',Georgia:'GA',Hawaii:'HI',Idaho:'ID',Illinois:'IL',Indiana:'IN',Iowa:'IA',Kansas:'KS',Kentucky:'KY',Louisiana:'LA',Maine:'ME',Maryland:'MD',Massachusetts:'MA',Michigan:'MI',Minnesota:'MN',Mississippi:'MS',Missouri:'MO',Montana:'MT',Nebraska:'NE',Nevada:'NV','New Hampshire':'NH','New Jersey':'NJ','New Mexico':'NM','New York':'NY','North Carolina':'NC','North Dakota':'ND',Ohio:'OH',Oklahoma:'OK',Oregon:'OR',Pennsylvania:'PA','Rhode Island':'RI','South Carolina':'SC','South Dakota':'SD',Tennessee:'TN',Texas:'TX',Utah:'UT',Vermont:'VT',Virginia:'VA',Washington:'WA','West Virginia':'WV',Wisconsin:'WI',Wyoming:'WY'};
+  const NAME_OF = Object.fromEntries(Object.entries(ABBR).map(([n,a])=>[a,n]));
+  const VIR = [[0,[68,1,84]],[0.25,[59,82,139]],[0.5,[33,145,140]],[0.75,[94,201,98]],[1,[253,231,37]]];
+  function viridis(t){ t=Math.max(0,Math.min(1,t)); for(let i=0;i<VIR.length-1;i++){ const [a,ca]=VIR[i],[b,cb]=VIR[i+1]; if(t<=b){ const u=(t-a)/(b-a); return 'rgb('+ca.map((c,k)=>Math.round(c+(cb[k]-c)*u)).join(',')+')'; } } return 'rgb(253,231,37)'; }
+
+  let heroYear = 2020, heroVals = {}, heroLo = 0, heroHi = 1, heroTimer = null, heroSel = null;
+  function buildHeroTiles(){
+    const grid = document.getElementById('hero-tiles');
+    if(grid.children.length) return;
+    TILES.forEach(([ab,c,r])=>{
+      const b = document.createElement('button'); b.className='tile'; b.textContent=ab; b.dataset.ab=ab;
+      b.style.gridColumn = c+1; b.style.gridRow = r+1; b.setAttribute('aria-pressed','false');
+      b.addEventListener('click',()=>{
+        grid.querySelectorAll('.tile').forEach(t=>t.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true');
+        heroSel = NAME_OF[ab]; showReadout();
+      });
+      grid.appendChild(b);
+    });
+  }
+  function showReadout(){
+    if(!heroSel) return;
+    const v = heroVals[heroSel];
+    document.getElementById('hero-readout').innerHTML = '<b>'+heroSel+', '+heroYear+':</b> '+(v==null?'not published':fmt(v,0)+' COVID deaths per 100,000 people')+' <span class="muted">(states range from '+fmt(heroLo,0)+' to '+fmt(heroHi,0)+')</span>';
+  }
+  function paintHero(){
+    const year = heroYear; const vals = {}; let lo=Infinity, hi=-Infinity;
+    ST.forEach(s=>{ const v=sv(s,'cov',year); vals[s]=v; if(v!=null){ lo=Math.min(lo,v); hi=Math.max(hi,v); } });
+    heroVals = vals; heroLo = lo; heroHi = hi;
+    document.querySelectorAll('#hero-tiles .tile').forEach(b=>{
+      const name = NAME_OF[b.dataset.ab], v = vals[name];
+      const t = v==null ? null : (v-lo)/(hi-lo||1);
+      b.style.background = t==null ? '#8c8c8c' : viridis(t);
+      b.setAttribute('aria-label', name+', '+year+': '+(v==null?'not published':fmt(v,0)+' COVID deaths per 100,000 people'));
+    });
+    document.getElementById('hero-year-label').textContent = year;
+    document.getElementById('hero-year').value = String(year);
+    document.getElementById('hero-year').setAttribute('aria-valuetext', String(year));
+    document.getElementById('hero-lo').textContent = 'Lowest state: ' + fmt(lo,0);
+    document.getElementById('hero-hi').textContent = 'Highest state: ' + fmt(hi,0);
+    document.getElementById('hero-legend').style.background = 'linear-gradient(to right,'+[0,.25,.5,.75,1].map(t=>viridis(t)).join(',')+')';
+    showReadout();
+  }
+  function stopHeroPlay(){
+    if(heroTimer){ clearInterval(heroTimer); heroTimer=null; }
+    const b = document.getElementById('hero-play'); b.textContent='Play'; b.setAttribute('aria-pressed','false');
+  }
+  function buildHero(){
+    buildHeroTiles();
+    paintHero();
+    document.getElementById('hero-year').addEventListener('input', e=>{ stopHeroPlay(); heroYear=+e.target.value; paintHero(); });
+    document.getElementById('hero-play').addEventListener('click', e=>{
+      if(heroTimer){ stopHeroPlay(); return; }
+      e.target.textContent='Pause'; e.target.setAttribute('aria-pressed','true');
+      if(heroYear>=2023) heroYear=2020; paintHero();
+      heroTimer = setInterval(()=>{ heroYear = heroYear>=2023 ? 2020 : heroYear+1; paintHero(); }, reduce?2600:1800);
+    });
+  }
+
+  // ---------- Main dashboard ----------
+  function buildKPIs(){
+    const hpN=D.nat.hpi, incN=D.nat.realinc;
+    const hp = pct(hpN[I(2019)], hpN[I(2023)]);
+    document.getElementById('kpi-hp').textContent = sgn(hp,0)+'%';
+    document.getElementById('kpi-inc').textContent = usd(incN[I(2023)]);
+    document.getElementById('kpi-inc0').textContent = usd(incN[I(2019)]);
+    document.querySelectorAll('[data-count]').forEach(el=>{
+      const target=parseFloat(el.dataset.count), dec=parseInt(el.dataset.dec||'0',10), suf=el.dataset.suffix||'';
+      if(reduce){ el.textContent=fmt(target,dec)+suf; return; }
+      const t0=performance.now(), dur=1100;
+      const step=t=>{ const p=Math.min((t-t0)/dur,1), e=1-Math.pow(1-p,3); el.textContent=fmt(target*e,dec)+suf; if(p<1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    });
+  }
+
+  function buildJobs(){
+    const ml = D.monthly.labels.map(m=>{ const [y,mo]=m.split('/'); return MON[+mo-1]+' '+y; });
+    mk('c-jobs',{type:'line',data:{labels:ml,datasets:[{label:'Unemployment rate (%)',data:D.monthly.unemp,borderColor:C.unemp,backgroundColor:C.unemp,pointRadius:0,borderWidth:3,tension:.25}]},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},animation:reduce?false:{duration:1400},
+        scales:{x:{ticks:{maxTicksLimit:9,autoSkip:true},grid:{display:false}},y:{beginAtZero:true,title:{display:true,text:'Unemployment rate (%)'}}},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Unemployment: '+fmt(c.parsed.y,1)+'%'}}}},
+      plugins:[shade(ml.indexOf('Mar 2020'), ml.indexOf('Dec 2020'), 'COVID period')]});
+  }
+
+  function buildBirths(){
+    const yrs = Y.map(String);
+    const ni = Y.map((y,i)=> (D.nat.births[i]!=null&&D.nat.deaths[i]!=null) ? D.nat.births[i]-D.nat.deaths[i] : null);
+    mk('c-births',{data:{labels:yrs,datasets:[
+      {type:'bar',label:'COVID deaths (bars, right axis)',data:D.nat.covid_deaths,backgroundColor:C.covid,yAxisID:'y2',borderRadius:4},
+      {type:'line',label:'Births minus deaths (line, left axis)',data:ni,borderColor:C.income,backgroundColor:C.income,yAxisID:'y',pointRadius:4,borderWidth:3,tension:.25}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},animation:reduce?false:{duration:1200},
+      scales:{x:{grid:{display:false}},
+        y:{position:'left',title:{display:true,text:'Births minus deaths (people)'},ticks:{callback:v=>fmt(v/1000000,1)+' million'}},
+        y2:{position:'right',title:{display:true,text:'COVID deaths (people)'},grid:{drawOnChartArea:false},beginAtZero:true,ticks:{callback:v=>fmt(v/1000,0)+'K'}}},
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label.split(' (')[0]+': '+(c.parsed.y==null?'Not published':fmt(c.parsed.y,0))}}}}});
+  }
+
+  function buildInflation(){
+    const cpi = D.nat.cpi; const years=[]; const rates=[];
+    for(let y=2015;y<=2024;y++){ years.push(String(y)); rates.push(pct(cpi[I(y-1)], cpi[I(y)])); }
+    const i22 = years.indexOf('2022');
+    mk('c-infl',{type:'bar',data:{labels:years,datasets:[{label:'Inflation (% change in prices)',data:rates,backgroundColor:rates.map((v,i)=> (years[i]==='2021'||years[i]==='2022') ? C.covid : C.infl),borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:reduce?false:{duration:900},
+        scales:{x:{grid:{display:false}},y:{beginAtZero:true,title:{display:true,text:'Prices rose by (%)'},ticks:{callback:v=>v+'%'}}},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Prices rose '+fmt(c.parsed.y,1)+'% that year'}}}}});
+    const per100 = 100*cpi[I(2024)]/cpi[I(2019)];
+    document.getElementById('infl-text').innerHTML = 'Prices rose the most in 2022, by about <b>'+fmt(rates[i22],1)+'%</b> (orange-red bars mark 2021 and 2022). <b>In dollars:</b> something that cost <b>$100 in 2019</b> cost about <b>'+usd(per100).replace('$','$')+'.'+'</b> in 2024.';
+    document.getElementById('infl-text').innerHTML = 'Prices rose the most in 2022, by about <b>'+fmt(rates[i22],1)+'%</b> (the red bars mark 2021 and 2022). <b>In dollars:</b> something that cost <b>$100 in 2019</b> cost about <b>$'+fmt(per100,2)+'</b> in 2024.';
+  }
+
+  function buildIncome(){
+    const inc = D.nat.realinc;
+    mk('c-income',{type:'line',data:{labels:Y.map(String),datasets:[{label:'Median household income (2025 dollars)',data:inc,borderColor:C.income,backgroundColor:C.income,pointRadius:4,borderWidth:3,tension:.25,spanGaps:false}]},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},animation:reduce?false:{duration:1300},
+        scales:{x:{grid:{display:false}},y:{title:{display:true,text:'Income in 2025 dollars'},ticks:{callback:v=>'$'+fmt(v,0)}}},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y==null?'Not published (no 2020 estimate)':usd(c.parsed.y)}}}},
+      plugins:[shade(I(2020),I(2021),'2020 not published')]});
+    document.getElementById('income-text').innerHTML = 'A typical household earned <b>'+usd(inc[I(2014)])+'</b> in 2014 and <b>'+usd(inc[I(2019)])+'</b> in 2019 (2025 dollars). In 2023 it was <b>'+usd(inc[I(2023)])+'</b>. Incomes rose before COVID and did not grow after 2019, once prices are accounted for.';
+  }
+
+  let causeYear = 2020;
+  function buildCauses(){
+    const sel = document.getElementById('cause-year');
+    if(!sel.options.length){ for(let y=2014;y<=2024;y++){ const o=document.createElement('option'); o.value=String(y); o.textContent=String(y); sel.appendChild(o); } sel.value=String(causeYear); sel.addEventListener('change',()=>{ causeYear=+sel.value; drawCauses(); }); }
+    drawCauses();
+  }
+  function drawCauses(){
+    const y = causeYear; const rows = D.top5[String(y)] || [];
+    const labels = rows.map(r=>r[0]+' ('+fmt(r[1],0)+')');
+    mk('c-causes',{type:'bar',data:{labels,datasets:[{label:'Deaths',data:rows.map(r=>r[1]),backgroundColor:rows.map(r=>r[0]==='COVID-19'?C.covid:C.unemp),borderRadius:4}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:reduce?false:{duration:700},
+        scales:{x:{beginAtZero:true,title:{display:true,text:'Deaths in '+y},ticks:{callback:v=>fmt(v/1000,0)+'K'}},y:{ticks:{autoSkip:false}}},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.x,0)+' deaths'}}}}});
+    const i = rows.findIndex(r=>r[0]==='COVID-19');
+    let txt = 'The top two causes were heart disease and cancer. ';
+    if(y<2020) txt += 'COVID-19 was not a listed cause of death in '+y+' because the pandemic had not started.';
+    else if(i>=0) txt += 'COVID-19 ranked <b>#'+(i+1)+'</b> of the top five in '+y+', with '+fmt(rows[i][1],0)+' deaths (orange bar).';
+    else txt += 'COVID-19 was not in the top five in '+y+'.';
+    document.getElementById('cause-text').innerHTML = txt;
+  }
+
+  function buildStates(){
+    const data = key => ST.map(s=>({s, v:(sv(s,key,2023)!=null && sv(s,key,2019)!=null) ? sv(s,key,2023)-sv(s,key,2019) : null})).filter(r=>r.v!=null).sort((a,b)=>b.v-a.v);
+    const un = data('un'), lf = data('lfpr');
+    const bar = (id, rows, color, title) => mk(id,{type:'bar',data:{labels:rows.map(r=>r.s),datasets:[{label:title,data:rows.map(r=>r.v),backgroundColor:color,borderRadius:2}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:reduce?false:{duration:900},
+        scales:{x:{title:{display:true,text:'Change, 2019 to 2023 (points)'}},y:{ticks:{autoSkip:false,font:{size:12}}}},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>sgn(c.parsed.x,2)+' points'}}}}});
+    bar('c-st-un', un, C.unemp, 'Unemployment change');
+    bar('c-st-lf', lf, C.income, 'Participation change');
+    const upU = un.filter(r=>r.v>0).length, downLF = lf.filter(r=>r.v<0).length;
+    document.getElementById('states-text').innerHTML = 'Unemployment was <b>higher in 2023 than 2019 in '+upU+' states</b>, and labor force participation was <b>lower in '+downLF+' states</b>. The two charts do not match state by state: several states with big unemployment changes saw participation change very little. That is why the dots in the test section do not form a clear line.';
+  }
+
+  function buildHome(){
+    const h = D.nat.hpi;
+    mk('c-home',{type:'line',data:{labels:Y.map(String),datasets:[{label:'Home price index (1975 = 100)',data:h,borderColor:C.home,backgroundColor:C.home,pointRadius:4,borderWidth:3,tension:.25,spanGaps:false}]},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},animation:reduce?false:{duration:1300},
+        scales:{x:{grid:{display:false}},y:{title:{display:true,text:'Home price index (1975 = 100)'}}},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Index: '+fmt(c.parsed.y,1)}}}},
+      plugins:[shade(I(2020),I(2021),'COVID years')]});
+    document.getElementById('home-text').innerHTML = 'The index rose every year, from <b>'+fmt(h[I(2014)],0)+'</b> in 2014 to <b>'+fmt(h[I(2023)],0)+'</b> in 2023. From 2019 to 2023 it rose about <b>'+sgn(pct(h[I(2019)],h[I(2023)]),0)+'%</b>, and the pace picked up after 2020. Compare incomes in dollars (panel 4) with this index, which only shows change.';
+  }
+
+  // ---------- Go deeper ----------
+  function fillMeasureSelects(){
+    ['rank-measure','grp-measure'].forEach(id=>{
+      const sel=document.getElementById(id); if(sel.options.length) return;
+      MKEYS.forEach(k=>{ const o=document.createElement('option'); o.value=k; o.textContent=MEAS[k].label; sel.appendChild(o); });
+    });
+    const ps=document.getElementById('prof-state'); if(!ps.options.length){ ST.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; ps.appendChild(o); }); ps.value='Alabama'; }
+  }
+  function buildRank(){
+    const k=document.getElementById('rank-measure').value, asc=document.getElementById('rank-order').value==='asc';
+    const m=MEAS[k];
+    let rows = ST.map(s=>({s, v:m.f(s)})).filter(r=>r.v!=null);
+    rows.sort((a,b)=> asc ? a.v-b.v : b.v-a.v);
+    mk('c-rank',{type:'bar',data:{labels:rows.map(r=>r.s),datasets:[{label:m.label,data:rows.map(r=>r.v),backgroundColor:rows.map((r,i)=> i<5 ? C.covid : C.unemp),borderRadius:3}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:reduce?false:{duration:700},
+        scales:{x:{title:{display:true,text:m.label}},y:{ticks:{autoSkip:false,font:{size:13}}}},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.x,m.d)+m.u}}}}});
+    document.getElementById('rank-note').innerHTML = 'The five highest (or lowest, if you pick that order) are in orange. States with no value are left out.';
+  }
+  function buildGroups(){
+    const k=document.getElementById('grp-measure').value, m=MEAS[k];
+    const avgs=[0,1,2,3].map(g=> mean(ST.filter(s=>S[s].g===g).map(s=>m.f(s))));
+    const counts=[0,1,2,3].map(g=>ST.filter(s=>S[s].g===g && m.f(s)!=null).length);
+    mk('c-groups',{type:'bar',data:{labels:D.groups.map((g,i)=>g+' ('+counts[i]+' states)'),datasets:[{label:'Average: '+m.label,data:avgs,backgroundColor:GROUP_COLORS,borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:reduce?false:{duration:800},
+        scales:{y:{title:{display:true,text:m.label}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Average: '+fmt(c.parsed.y,m.d)+m.u}}}}});
+  }
+  function buildProfile(){
+    const s=document.getElementById('prof-state').value, grid=document.getElementById('prof-grid');
+    grid.innerHTML='';
+    const specs=[
+      {t:'Unemployment rate (%)', key:'un', color:C.unemp, d:1},
+      {t:'Labor force participation (%)', key:'lfpr', color:C.income, d:1},
+      {t:'Home price index (1975 = 100)', key:'hpi', color:C.home, d:1},
+      {t:'Median household income (2025 $)', key:'inc', color:C.income, d:0, money:true},
+      {t:'Cost of living (U.S. = 100)', key:'rpp', color:C.infl, d:1},
+      {t:'COVID deaths per 100,000', key:'cov', color:C.covid, d:0}
+    ];
+    specs.forEach((sp,i)=>{
+      const art=document.createElement('div'); art.className='panel'; art.style.animationDelay=(i*0.06)+'s';
+      const h=document.createElement('h3'); h.textContent=sp.t; h.style.fontSize='1rem';
+      const box=document.createElement('div'); box.className='chart'; box.style.height='200px';
+      const cvs=document.createElement('canvas'); cvs.id='prof-'+i; cvs.setAttribute('role','img'); cvs.setAttribute('aria-label', sp.t+' for '+s);
+      box.appendChild(cvs); art.appendChild(h); art.appendChild(box); grid.appendChild(art);
+      const data = (S[s][sp.key]||[]).map(v=>v);
+      mk(cvs.id,{type:'line',data:{labels:Y.map(String),datasets:[{label:s,data:data,borderColor:sp.color,backgroundColor:sp.color,pointRadius:2.5,borderWidth:2.5,tension:.25,spanGaps:false}]},
+        options:{responsive:true,maintainAspectRatio:false,animation:reduce?false:{duration:900},interaction:{mode:'index',intersect:false},
+          scales:{x:{grid:{display:false},ticks:{maxTicksLimit:6}},y:{ticks:{callback:v=>sp.money?'$'+fmt(v,0):fmt(v,sp.d)}}},
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.parsed.y==null?'Not published':(sp.money?usd(c.parsed.y):fmt(c.parsed.y,sp.d)))}}}}});
+    });
+  }
+  function buildTable(){
+    const head=document.getElementById('tbl-head'), body=document.getElementById('tbl-body');
+    const cols=[['un',2024,'Unemployment 2024 (%)',1],['lfpr',2024,'Participation 2024 (%)',1],['hpi',2023,'Home price index 2023',1],['inc',2023,'Income 2023 (2025 $)',0],['cov',2021,'COVID per 100k 2021',0],['cov',2022,'COVID per 100k 2022',0]];
+    head.innerHTML='<tr><th scope="col">State</th>'+cols.map(c=>'<th scope="col">'+c[2]+'</th>').join('')+'</tr>';
+    const q=(document.getElementById('tbl-search').value||'').toLowerCase();
+    body.innerHTML='';
+    ST.filter(s=>!q||s.toLowerCase().includes(q)).forEach(s=>{
+      const tr=document.createElement('tr'); const td0=document.createElement('td'); td0.textContent=s; tr.appendChild(td0);
+      cols.forEach(c=>{ const td=document.createElement('td'); td.textContent=fmt(sv(s,c[0],c[1]),c[3]); tr.appendChild(td); });
+      body.appendChild(tr);
+    });
+  }
+
+  // ---------- Tested ----------
+  function buildMonthly(){
+    const ml = D.monthly.labels.map(m=>{ const [y,mo]=m.split('/'); return MON[+mo-1]+' '+y; });
+    mk('c-monthly',{type:'line',data:{labels:ml,datasets:[
+      {label:'Unemployment rate (%), solid line, left axis',data:D.monthly.unemp,borderColor:C.unemp,backgroundColor:C.unemp,yAxisID:'y',pointRadius:0,borderWidth:3,tension:.25},
+      {label:'Suicide deaths per month, dashed line, right axis',data:D.monthly.suicide,borderColor:C.suicide,backgroundColor:C.suicide,yAxisID:'y2',pointRadius:0,borderWidth:2.5,borderDash:[6,4],tension:.25}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},animation:reduce?false:{duration:1400},
+      scales:{x:{ticks:{maxTicksLimit:9,autoSkip:true},grid:{display:false}},y:{position:'left',title:{display:true,text:'Unemployment (%)'},beginAtZero:true},y2:{position:'right',title:{display:true,text:'Suicide deaths per month'},grid:{drawOnChartArea:false}}},
+      plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label.split(',')[0]+': '+fmt(c.parsed.y, c.datasetIndex===0?1:0)}}}},
+      plugins:[shade(ml.indexOf('Mar 2020'), ml.indexOf('Dec 2020'), 'COVID period')]});
+  }
+  function buildTested(){
+    const grid=document.getElementById('tested-grid'); grid.innerHTML='';
+    const tests=[
+      {t:'Did COVID death rates line up with income changes?', x:'cov', y:'inc', xl:'COVID deaths per 100,000, 2020 to 2023 combined', yl:'Income change, 2019 to 2024 (%)', note:'Each dot is a state: how many COVID deaths it had, and how its income changed.'},
+      {t:'Did states with bigger job losses in 2020 see bigger COVID death rates?', x:'un', y:'cov', xl:'Unemployment change, 2019 to 2020 (points)', yl:'COVID deaths per 100,000, 2020 to 2023 combined', note:'Tests whether the 2020 job shock lined up with later COVID death rates.'},
+      {t:'Did states with bigger job losses in 2020 see bigger income drops?', x:'un', y:'inc', xl:'Unemployment change, 2019 to 2020 (points)', yl:'Income change, 2019 to 2024 (%)', note:'Tests whether states hit harder in 2020 had weaker incomes later.'},
+      {t:'Did COVID death rates line up with purchasing power?', x:'cov', y:'pp', xl:'COVID deaths per 100,000, 2020 to 2023 combined', yl:'Purchasing power change, 2015 to 2024 (%)', note:'Purchasing power is how far a household\'s income goes after local prices.'}
+    ];
+    tests.forEach((tt,i)=>{
+      const pts = ST.map(s=>({x:MEAS[tt.x].f(s), y:MEAS[tt.y].f(s), n:s, g:S[s].g})).filter(p=>p.x!=null&&p.y!=null);
+      const r = pear(pts.map(p=>p.x), pts.map(p=>p.y));
+      const art=document.createElement('article'); art.className='panel'; art.style.animationDelay=(i*0.08)+'s';
+      art.innerHTML='<h3>'+tt.t+'</h3><p class="where">Where: all states · When: as labeled in the chart</p><div class="r-row"><span class="muted">Correlation across '+pts.length+' states:</span><span class="rbig">'+(r==null?'n/a':(r>0?'+':'')+r.toFixed(2))+'</span></div><p class="ask" style="margin-bottom:8px">'+tt.note+'</p><div class="chart" style="height:280px"><canvas id="tst-'+i+'" role="img" aria-label="Scatter plot: '+tt.t+'"></canvas></div><p class="lbl">What it shows</p><p class="txt">'+(r==null?'Not enough states to measure.':(Math.abs(r)<0.2?'The dots show no clear pattern, so this data does not show a link.':(r>0?'Higher values on one measure tend to come with higher values on the other, but the link is weak to moderate.':'Higher values on one measure tend to come with lower values on the other, but the link is weak to moderate.')))+'</p><p class="lbl">Limits</p><p class="txt">Correlation does not show cause, and it only uses the 50 states.</p>';
+      grid.appendChild(art);
+      mk('tst-'+i,{type:'scatter',data:{datasets:[{label:'States',data:pts,backgroundColor:C.unemp,borderColor:'#FFFFFF',borderWidth:1,pointRadius:6,pointHoverRadius:9}]},
+        options:{responsive:true,maintainAspectRatio:false,animation:reduce?false:{duration:900},
+          scales:{x:{title:{display:true,text:tt.xl,font:{size:13}}},y:{title:{display:true,text:tt.yl,font:{size:13}}}},
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.n+': '+fmt(c.raw.x,1)+', '+fmt(c.raw.y,1)}}}}});
+    });
+  }
+
+  // ---------- Tabs ----------
+  const built = {main:false, deep:false, tested:false};
+  function show(name){
+    document.querySelectorAll('.tab').forEach(t=>{ const on=t.dataset.tab===name; t.setAttribute('aria-selected',on?'true':'false'); t.tabIndex=on?0:-1; });
+    document.querySelectorAll('.view').forEach(v=>{ v.hidden = !v.id.endsWith(name); if(!v.hidden){ v.classList.remove('view'); void v.offsetWidth; v.classList.add('view'); } });
+    if(name==='main' && !built.main){ built.main=true; setTimeout(()=>{ buildKPIs(); buildHero(); buildJobs(); buildBirths(); buildInflation(); buildIncome(); buildCauses(); buildStates(); },30); }
+    if(name==='deep' && !built.deep){ built.deep=true; setTimeout(()=>{ fillMeasureSelects(); buildHome(); buildRank(); buildGroups(); buildProfile(); buildTable(); },30); }
+    if(name==='tested' && !built.tested){ built.tested=true; setTimeout(()=>{ buildMonthly(); buildTested(); },30); }
+    if(history.replaceState) history.replaceState(null,'','#'+name);
+  }
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click',()=>show(t.dataset.tab));
+    t.addEventListener('keydown',e=>{ const tabs=[...document.querySelectorAll('.tab')]; const i=tabs.indexOf(t);
+      if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ const n=(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length; tabs[n].focus(); show(tabs[n].dataset.tab); e.preventDefault(); } });
+  });
+  document.getElementById('rank-measure').addEventListener('change',buildRank);
+  document.getElementById('rank-order').addEventListener('change',buildRank);
+  document.getElementById('grp-measure').addEventListener('change',buildGroups);
+  document.getElementById('prof-state').addEventListener('change',buildProfile);
+  document.getElementById('tbl-search').addEventListener('input',buildTable);
+  const start = (location.hash||'').replace('#','');
+  const valid = ['start','main','deep','tested','limits','src'];
+  fillMeasureSelects();
+  show(valid.includes(start) ? start : 'main');
+})();
+</script>
+
+</body></html>
